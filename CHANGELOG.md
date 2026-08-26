@@ -1,5 +1,15 @@
 # CHANGELOG.md — SIMONEV
 
+## [2026-08-21] — GitHub Remote Setup Completed
+
+### Added
+- Repository GitHub **`Risyad02/simonev`** (private) dibuat dan dihubungkan sebagai remote `origin`.
+- Branch strategy diterapkan di remote: `main`, `develop`, `feature/phase2-environment-setup` — seluruhnya berhasil di-push dan ter-tracking.
+- Autentikasi menggunakan GitHub CLI (`gh`) + HTTPS, akun `Risyad02`.
+
+### Verified
+- GitHub Web Verification: owner, visibility (private), ketiga branch, commit foundation `66a019a`, dan seluruh file dokumentasi tersedia di remote tanpa file sensitif (`.env`, credential) ikut ter-commit.
+
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
 ## [2026-08-21] — Architecture Decision: Backend Framework Laravel 12 → Laravel 13

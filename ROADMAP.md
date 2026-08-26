@@ -18,7 +18,8 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Acceptance Criteria**: Seluruh dokumen foundation disetujui pemilik proyek.
 - **Status**: 🟢 **Completed** — diterima final oleh pemilik proyek pada 2026-08-11.
 
-## Phase 2 — Environment Setup — 🟡 NEXT (belum dimulai, menunggu instruksi lanjut)
+## Phase 2 — Environment Setup — 🟡 BERJALAN
+- **Progress**: Git repository ✅ · Branch strategy (main/develop/feature) ✅ · GitHub remote setup ✅ · Environment verification ✅ · Architecture Decision Laravel 13 ✅ · Dependency compatibility ✅. **Belum**: instalasi Laravel 13, instalasi Vue 3+Vite, `.env`, koneksi database, verifikasi server berjalan.
 - **Tujuan**: Menyiapkan lingkungan pengembangan lokal & repositori.
 - **Prerequisite**: Phase 1 selesai.
 - **Pekerjaan**: Install Laravel 13 project, install Vue 3 project (Vite), setup `.env`, setup database lokal, setup Git repository & branch strategy.
