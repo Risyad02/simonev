@@ -29,6 +29,9 @@ Diproses melalui Change Management Process (`CLAUDE.md` §17): Analyze → Clari
 ### Impacted Files
 `CLAUDE.md` (§8, §9, §15), `ROADMAP.md` (Phase 5, 9, 10, 11), `README.md` (Struktur Peran), `docs/architecture/README.md` (§1, §2 — restrukturisasi penuh), Dokumen Desain SIMONEV (Tahap 2.2/2.5, Tahap 3.3).
 
+### Also Included in Commit `d05849e` (outside CR-001 scope)
+- `GEMINI.md` (root) and `docs/ai/AI_WORKFLOW.md` — governance/instruction files for running Gemini CLI alongside Claude on this repo. Reviewed 2026-08-29: no credentials/secrets present; content is consistent with (not contradictory to) `CLAUDE.md` as supreme source of truth, Options API-only rule, Git branching/approval rules, and STOP-on-TBD behavior already established in this project. Not part of CR-001 itself — noted here for commit-history accuracy only.
+
 ## [2026-08-21] — Architecture Decision: Backend Framework Laravel 12 → Laravel 13
 
 ### Changed
