@@ -4,7 +4,7 @@ Aplikasi web untuk memantau **target dan realisasi kinerja** 1 (satu) Perangkat 
 
 ## Status Proyek
 
-**Phase 2 — Environment Setup** (lihat `ROADMAP.md`)
+**Phase 1 — Project Foundation** (lihat `ROADMAP.md`)
 
 ## Dokumen Proyek
 
@@ -20,20 +20,9 @@ Aplikasi web untuk memantau **target dan realisasi kinerja** 1 (satu) Perangkat 
 
 Laravel 13 · Vue 3 (Options API) · Pinia · MySQL/MariaDB · Sanctum · Spatie Permission · ApexCharts — lihat `CLAUDE.md` §2 untuk detail & alasan.
 
-## Repository
-
-- GitHub: `Risyad02/simonev` (private)
-- Branch strategy: `main` (stable) · `develop` (integration) · `feature/*` (development)
-
-```bash
-git clone https://github.com/Risyad02/simonev.git
-cd simonev
-git checkout develop
-```
-
 ## Struktur Peran (Roles)
 
-Admin, Operator, **Kepala Sub Bidang**, Kepala Bidang, Sekretaris, Kepala Dinas, Pimpinan, Publik.
+**Super Admin**, **Admin**, Operator, **Kepala Sub Bidang**, Kepala Bidang, Sekretaris (= Sekretaris Dinas/Sekdin), Kepala Dinas, Pimpinan, Publik. Detail RBAC: `docs/architecture/README.md` §2.
 
 ## Cara Menjalankan (diisi setelah Phase 2 — Environment Setup)
 

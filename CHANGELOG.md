@@ -1,16 +1,33 @@
 # CHANGELOG.md — SIMONEV
 
-## [2026-08-21] — GitHub Remote Setup Completed
+Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
+
+## [2026-08-28] — CR-001: Perubahan Hak Akses, Workflow, dan Struktur Admin
+
+Diproses melalui Change Management Process (`CLAUDE.md` §17): Analyze → Clarify → Proposed Decision → **Approval** → Update Documentation (tahap ini) → Verify → Implement (belum dimulai).
 
 ### Added
-- Repository GitHub **`Risyad02/simonev`** (private) dibuat dan dihubungkan sebagai remote `origin`.
-- Branch strategy diterapkan di remote: `main`, `develop`, `feature/phase2-environment-setup` — seluruhnya berhasil di-push dan ter-tracking.
-- Autentikasi menggunakan GitHub CLI (`gh`) + HTTPS, akun `Risyad02`.
+- Role baru **Super Admin**, terpisah dari **Admin** (AD-1). Total role RBAC: 8 → **9**.
+- Kewenangan Sekretaris diperluas: View/Rekap lintas bidang, Review, **Koreksi** (kewenangan proses bisnis — kembalikan untuk perbaikan oleh pihak berwenang sesuai pemilik data/workflow masing-masing → ajukan ulang → review kembali), **Approve/Reject pada tahap rekap** (non-final) (AD-3).
+- Ditegaskan: **Sekretaris = Sekretaris Dinas (Sekdin)** — satu role yang sama, tidak ada role terpisah.
 
-### Verified
-- GitHub Web Verification: owner, visibility (private), ketiga branch, commit foundation `66a019a`, dan seluruh file dokumentasi tersedia di remote tanpa file sensitif (`.env`, credential) ikut ter-commit.
+### Changed
+- Penetapan target **disentralisasi ke Admin** (eksekutor tunggal), berdasarkan dokumen perencanaan resmi, setelah pembahasan bersama bidang terkait (AD-2). Kabid & Sekretaris kini "ikut pembahasan", tidak lagi mengeksekusi.
+- Workflow validasi: Kasubbid → Kabid → **Sekretaris (Review/Koreksi/Approve/Reject, non-final)** → Kadis (final).
+- Notifikasi MVP ditegaskan dibatasi kanal **email**; WhatsApp/API gateway dicatat sebagai future enhancement (AD-4).
+- RBAC Matrix di `docs/architecture/README.md` §2.4 direvisi total mengikuti struktur role baru.
 
-Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
+### Marked as TBD (belum diputuskan, jangan diimplementasikan)
+1. Pembagian pengelolaan master data operasional antara Super Admin dan Admin.
+2. Akses publikasi/override portal publik oleh Super Admin.
+3. Kewajiban approval Kepala Dinas atas revisi target.
+4. Mekanisme pembuatan Super Admin pertama dan berikutnya.
+
+### Noted (bukan Architecture Decision)
+- Status "Bagian Perencanaan/Perencana sebagai kandidat pemegang role Admin" dicatat sebagai rencana organisasi, **belum final**. Sistem tetap dirancang berbasis role.
+
+### Impacted Files
+`CLAUDE.md` (§8, §9, §15), `ROADMAP.md` (Phase 5, 9, 10, 11), `README.md` (Struktur Peran), `docs/architecture/README.md` (§1, §2 — restrukturisasi penuh), Dokumen Desain SIMONEV (Tahap 2.2/2.5, Tahap 3.3).
 
 ## [2026-08-21] — Architecture Decision: Backend Framework Laravel 12 → Laravel 13
 

@@ -18,8 +18,7 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Acceptance Criteria**: Seluruh dokumen foundation disetujui pemilik proyek.
 - **Status**: 🟢 **Completed** — diterima final oleh pemilik proyek pada 2026-08-11.
 
-## Phase 2 — Environment Setup — 🟡 BERJALAN
-- **Progress**: Git repository ✅ · Branch strategy (main/develop/feature) ✅ · GitHub remote setup ✅ · Environment verification ✅ · Architecture Decision Laravel 13 ✅ · Dependency compatibility ✅. **Belum**: instalasi Laravel 13, instalasi Vue 3+Vite, `.env`, koneksi database, verifikasi server berjalan.
+## Phase 2 — Environment Setup — 🟡 NEXT (belum dimulai, menunggu instruksi lanjut)
 - **Tujuan**: Menyiapkan lingkungan pengembangan lokal & repositori.
 - **Prerequisite**: Phase 1 selesai.
 - **Pekerjaan**: Install Laravel 13 project, install Vue 3 project (Vite), setup `.env`, setup database lokal, setup Git repository & branch strategy.
@@ -44,12 +43,12 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Acceptance Criteria**: Format response API konsisten sesuai `CLAUDE.md` §API Conventions.
 
 ## Phase 5 — Authentication & RBAC — ⚪
-- **Tujuan**: Login/logout, Sanctum token, role & permission (termasuk Kepala Sub Bidang).
-- **Prerequisite**: Phase 4 selesai.
-- **Pekerjaan**: Setup Sanctum, setup Spatie Permission, seeder role & permission, middleware proteksi route.
-- **Output**: API auth berjalan; RBAC matrix ter-enforce di backend.
-- **Testing**: Feature test login/logout/akses ditolak sesuai role.
-- **Acceptance Criteria**: Semua 8 role dapat login dan hanya mengakses modul sesuai matrix RBAC.
+- **Tujuan**: Login/logout, Sanctum token, role & permission (9 role: Super Admin, Admin, Operator, Kepala Sub Bidang, Kepala Bidang, Sekretaris, Kepala Dinas, Pimpinan, Publik — per CR-001).
+- **Prerequisite**: Phase 4 selesai; keempat TBD CR-001 (§CLAUDE.md §8) idealnya sudah dijawab sebelum seeder permission final ditulis — jika belum, seeder permission untuk item TBD dibuat menyusul, jangan diasumsikan.
+- **Pekerjaan**: Setup Sanctum, setup Spatie Permission, seeder role & permission (termasuk permission Sekretaris: review/koreksi/approve-rekap/reject-rekap, dan permission Super Admin: user.manage/system.manage), middleware proteksi route.
+- **Output**: API auth berjalan; RBAC matrix (CR-001) ter-enforce di backend.
+- **Testing**: Feature test login/logout/akses ditolak sesuai role; test khusus memastikan Approve Sekretaris tidak menghasilkan status final.
+- **Acceptance Criteria**: Semua 9 role dapat login dan hanya mengakses modul sesuai matrix RBAC (`docs/architecture/README.md` §2.4).
 
 ## Phase 6 — Master Data — ⚪
 - **Tujuan**: CRUD satuan, formula, periode pelaporan, unit/bidang.
@@ -68,19 +67,22 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Acceptance Criteria**: Revisi konfigurasi indikator membentuk versi baru, versi lama tetap tersimpan.
 
 ## Phase 9 — Target Management — ⚪
-- **Tujuan**: Penetapan & revisi target per indicator_version per periode.
-- **Prerequisite**: Phase 8 selesai.
-- **Acceptance Criteria**: Revisi target wajib alasan; versi lama tetap terhubung ke realisasi lama.
+- **Tujuan**: Penetapan & revisi target per indicator_version per periode, **eksekusi eksklusif oleh Admin** berdasarkan dokumen perencanaan resmi (Renstra/RKPD Perubahan/Renstra Perubahan/Perjanjian Kinerja Perubahan), setelah pembahasan bersama Admin + bidang terkait (CR-001, AD-2).
+- **Prerequisite**: Phase 8 selesai. Open Question CR-001 #3 (kewajiban approval Kadis atas revisi target) idealnya dijawab sebelum acceptance criteria approval final ditulis.
+- **Pekerjaan tambahan (CR-001)**: referensi dokumen perencanaan pada proses penetapan target (field/tabel referensi, additive — tidak mengubah skema target existing); permission check: hanya Admin yang bisa eksekusi CRUD target; Kabid/Sekretaris hanya punya akses "ikut pembahasan" (bukan endpoint eksekusi).
+- **Acceptance Criteria**: Revisi target wajib alasan; versi lama tetap terhubung ke realisasi lama; hanya Admin yang dapat mengeksekusi penetapan/revisi target (di-enforce di level API, bukan hanya UI).
 
 ## Phase 10 — Realization Management — ⚪
 - **Tujuan**: Input realisasi Operator + perhitungan otomatis capaian/deviasi/status via formula engine.
 - **Prerequisite**: Phase 9 selesai.
-- **Acceptance Criteria**: Perhitungan capaian sesuai formula yang dikonfigurasi (bukan hard-coded), teruji untuk minimal 3 tipe formula.
+- **Pekerjaan tambahan (CR-001)**: dukung Admin sebagai operator backup lintas bidang — input oleh Admin tercatat di audit trail dengan action type eksplisit (`backup_operator_input`), bukan tampak seolah-olah input Operator biasa.
+- **Acceptance Criteria**: Perhitungan capaian sesuai formula yang dikonfigurasi (bukan hard-coded), teruji untuk minimal 3 tipe formula; input backup oleh Admin tercatat dan tertelusuri jelas di audit trail.
 
 ## Phase 11 — Validation & Approval Workflow — ⚪
-- **Tujuan**: Alur status Draft → Kasubbid → Kabid → Sekretaris → Kadis, dengan audit trail.
+- **Tujuan**: Alur status Draft → Kasubbid → Kabid → **Sekretaris (Review/Koreksi/Approve/Reject, non-final)** → Kadis (final), dengan audit trail (CR-001, AD-3).
 - **Prerequisite**: Phase 10 selesai.
-- **Acceptance Criteria**: Setiap transisi status tercatat lengkap (aktor, waktu, catatan); reject mengembalikan ke tahap sebelumnya dengan benar.
+- **Pekerjaan tambahan (CR-001)**: implementasi mekanisme Koreksi Sekretaris (kembalikan → perbaikan oleh pihak berwenang sesuai pemilik data/workflow masing-masing → ajukan ulang → review kembali) — Sekretaris tidak pernah mengubah nilai realisasi secara langsung; Approve Sekretaris menghasilkan status "direkomendasikan ke Kadis" (bukan status final); UI wajib membedakan status ini dari "Disahkan".
+- **Acceptance Criteria**: Setiap transisi status tercatat lengkap (aktor, waktu, catatan); reject/koreksi mengembalikan ke pihak berwenang yang benar (bukan selalu Operator/Kasubbid/Kabid — mengikuti pemilik data); status setelah Approve Sekretaris secara jelas bukan status final; hanya Kadis yang dapat menghasilkan status "Disahkan".
 
 ## Phase 12 — Dashboard & Analytics — ⚪
 - **Tujuan**: Dashboard internal per role + grafik (ApexCharts) + filter multi-dimensi.

@@ -68,20 +68,36 @@ Lihat `docs/architecture/README.md` §Folder Structure untuk struktur lengkap ba
 
 ## 8. RBAC (Roles)
 
-Admin, Operator, **Kepala Sub Bidang**, Kepala Bidang, Sekretaris, Kepala Dinas, Pimpinan, Publik.
+**Super Admin**, **Admin**, Operator, **Kepala Sub Bidang**, Kepala Bidang, Sekretaris, Kepala Dinas, Pimpinan, Publik — **9 role** (per CR-001, 2026-08-28).
 
-RBAC matrix lengkap (termasuk Kepala Sub Bidang): lihat `docs/architecture/README.md` §5.
+- **Super Admin**: tata kelola platform — manajemen pengguna & role/permission, konfigurasi sistem, master data sistem-kritis, audit tingkat sistem. Tidak otomatis punya akses CRUD data kinerja operasional.
+- **Admin**: tata kelola operasional — CRUD struktur & indikator, **eksekutor tunggal penetapan target** (berdasarkan dokumen perencanaan resmi: Renstra/RKPD Perubahan/Renstra Perubahan/Perjanjian Kinerja Perubahan), dapat menjadi **operator backup lintas bidang** (tercatat eksplisit di audit trail sebagai tindakan backup), publikasi ke portal publik.
+- **Sekretaris**: mencakup peran Sekretaris Dinas (Sekdin) — **satu role yang sama**, bukan role terpisah. Kewenangan: View/rekap lintas bidang, Review, **Koreksi** (kewenangan proses bisnis — kembalikan untuk perbaikan oleh pihak berwenang sesuai pemilik data/workflow masing-masing → ajukan ulang → review kembali; **bukan** edit langsung nilai realisasi), **Approve/Reject pada tahap rekap** (non-final — approve = diteruskan ke Kadis, reject = dikembalikan ke pihak berwenang). Sekretaris **tidak** memiliki CRUD bebas atas data bidang lain. Untuk data operasional milik unit Sekretariat sendiri, Sekretaris berperan setara Kabid (validasi seperti unit lain).
 
-## 9. Workflow Validasi (updated)
+RBAC matrix lengkap: lihat `docs/architecture/README.md` §2.
+
+**TBD (belum diputuskan, jangan diasumsikan/diimplementasikan)**:
+1. Pembagian pengelolaan master data operasional (satuan, periode, unit/bidang) antara Super Admin dan Admin.
+2. Apakah Super Admin memiliki akses publikasi/override publik.
+3. Apakah Kepala Dinas tetap perlu approval khusus untuk revisi target.
+4. Mekanisme pembuatan Super Admin pertama dan berikutnya.
+
+**Catatan organisasi (bukan Architecture Decision)**: Bagian Perencanaan/Perencana sebagai kandidat pemegang role Admin — masih **rencana, belum final**. Sistem tetap dirancang berbasis role, bukan berbasis unit/orang.
+
+## 9. Workflow Validasi (updated — CR-001)
 
 ```
 Operator (input)
-  → Kepala Sub Bidang (validasi tingkat sub kegiatan/sub bidang)
-  → Kepala Bidang (validasi tingkat bidang/kegiatan)
-  → Sekretaris (rekap lintas bidang)
+  → Kepala Sub Bidang (Approve/Reject, tingkat sub bidang)
+  → Kepala Bidang (Approve/Reject, tingkat bidang)
+  → Sekretaris (Review, Koreksi, Approve, Reject — tahap rekap lintas bidang, NON-FINAL)
   → Kepala Dinas (pengesahan final)
 ```
-Setiap tahap dapat mengembalikan (reject) ke tahap sebelumnya disertai catatan. Status "Disahkan" terkunci.
+- Setiap tahap dapat mengembalikan (reject) ke tahap sebelumnya disertai catatan wajib.
+- **Approve Sekretaris bukan pengesahan final** — status data menjadi "direkomendasikan/diteruskan ke Kepala Dinas".
+- **Koreksi Sekretaris** = kembalikan untuk perbaikan → pihak berwenang (mengikuti pemilik data/workflow masing-masing, tidak dikunci selalu Operator→Kasubbid→Kabid) memperbaiki → ajukan ulang → review kembali. Wajib catatan + audit trail. Tidak pernah mengubah nilai realisasi secara langsung.
+- Status "Disahkan" (oleh Kadis) terkunci.
+- Penetapan target: Admin (eksekutor tunggal) berdasarkan dokumen resmi, setelah pembahasan bersama Admin + bidang terkait.
 
 ## 10. Versioning Rules
 
@@ -119,6 +135,11 @@ Setiap tahap dapat mengembalikan (reject) ke tahap sebelumnya disertai catatan. 
 | 2026-08-11 | Phase 1 — Project Foundation ditandai **selesai**; Phase 2 — Environment Setup berikutnya | Acceptance criteria Phase 1 terpenuhi |
 | 2026-08-11 | Pemilik proyek menyatakan penerimaan final Phase 1 dan meminta proses **Change Management** eksplisit ditetapkan agar proyek tetap adaptif terhadap perubahan spesifikasi/fitur | Menjaga fleksibilitas proyek tanpa mengorbankan disiplin roadmap — lihat §17 |
 | 2026-08-21 | **Architecture Decision — Backend framework: Laravel 12 → Laravel 13.** Environment: PHP 8.5.2. Alasan: Laravel 13 resmi mendukung PHP 8.3–8.5 (Laravel 12 hanya resmi 8.2–8.4 dan bug-fix-nya sudah berakhir 13 Agu 2026); Laravel 13 adalah release terbaru dengan bug-fix s.d. Q3 2027 & security fix s.d. Q1 2028; environment lokal developer sudah PHP 8.5.2. Dampak: perubahan versi framework murni — **tidak mengubah** business requirement, ERD, business process, UI/UX, roadmap, maupun architecture principles (Structured Modular Monolith, API-first, versioning-over-overwrite, formula-as-data, relational core + flexible JSON, full auditability tetap berlaku sepenuhnya). | Disetujui eksplisit pemilik proyek, via Change Management Process §17 |
+| 2026-08-28 | **Architecture Decision (CR-001, AD-1) — Tambah role Super Admin**, terpisah dari Admin. Super Admin: tata kelola platform (user/role/permission, konfigurasi sistem, master data sistem-kritis, audit sistem). Admin: tata kelola operasional (struktur, indikator, target, backup operator). Role bertambah dari 8 → 9. | Menghindari bottleneck/single point of failure bila seluruh kewenangan administrasi hanya di 1 role |
+| 2026-08-28 | **Architecture Decision (CR-001, AD-2) — Penetapan target disentralisasi ke Admin** (eksekutor tunggal), berdasarkan dokumen perencanaan resmi (Renstra/RKPD Perubahan/Renstra Perubahan/Perjanjian Kinerja Perubahan), setelah pembahasan bersama bidang terkait. Kabid & Sekretaris berpartisipasi dalam pembahasan, tidak lagi mengeksekusi penetapan target. | Menjaga konsistensi data, keamanan, dan kepatuhan pada dokumen perencanaan resmi |
+| 2026-08-28 | **Architecture Decision (CR-001, AD-3) — Perluasan kewenangan Sekretaris** menjadi Review, Koreksi (kewenangan proses bisnis, mekanisme kembalikan→perbaiki→ajukan ulang, bukan CRUD langsung), Approve, Reject pada tahap rekap lintas bidang — bersifat **non-final** (approve = diteruskan ke Kadis; Kadis tetap pengesah final). Sekretaris = Sekretaris Dinas (Sekdin), **satu role yang sama**, bukan role terpisah. Workflow validasi: Kasubbid → Kabid → Sekretaris (rekap) → Kadis. | Mengakomodasi kebutuhan review/koreksi organisasi tanpa menghapus kendali Kabid atas bidangnya maupun kewenangan pengesahan final Kadis |
+| 2026-08-28 | **Architecture Decision (CR-001, AD-4) — Notifikasi MVP dibatasi kanal email** (Laravel Notification, database + SMTP). WhatsApp/API gateway dicatat sebagai future enhancement, arsitektur tetap channel-agnostic (tidak perlu redesign untuk menambah kanal nanti). | Pertimbangan biaya & keterbatasan API gratis pada tahap awal; baseline notifikasi sudah cukup fleksibel |
+| 2026-08-28 | 4 hal terkait CR-001 ditetapkan **TBD** (belum diputuskan, jangan diimplementasikan): pembagian master data operasional Super Admin vs Admin; akses publikasi/override Super Admin; kewajiban approval Kadis atas revisi target; mekanisme pembuatan Super Admin pertama & berikutnya. Status "Bagian Perencanaan/Perencana sebagai kandidat Admin" dicatat sebagai rencana organisasi, **bukan** Architecture Decision. | Menghindari asumsi/implementasi prematur atas hal yang belum disepakati pemilik proyek |
 
 ## 16. Known Limitations (tahap ini)
 
