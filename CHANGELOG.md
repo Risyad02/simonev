@@ -2,6 +2,39 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-08-31] — Phase 2: Instalasi Laravel 13 & Konfigurasi Database (STEP 2.2)
+
+### Added
+- `.gitignore` root untuk backend (Laravel) dan frontend (Vue) — mencegah
+  `vendor/`, `node_modules/`, dan `.env` ter-track oleh Git.
+- Laravel 13 (v13.29.0) terinstal di `backend/` via `composer create-project`.
+- Konfigurasi `.env` backend diarahkan ke MariaDB lokal (`simonev_db`) via XAMPP.
+
+### Changed
+- Composer diupdate dari v2.8.12 ke v2.10.3 untuk menutup 8 celah keamanan
+  (termasuk CVE-2026-24739 yang relevan untuk lingkungan Git Bash/Windows)
+  dan memperbarui pubkey verifikasi tag/dev (diverifikasi cocok dengan
+  sumber resmi composer.github.io/pubkeys.html).
+
+### Removed
+- File bootstrap Laravel Boost (`backend/AGENTS.md`, `backend/CLAUDE.md`)
+  bawaan skeleton `laravel/laravel`, dihapus untuk menghindari konflik
+  otoritas dokumentasi dengan `CLAUDE.md` root proyek. Tidak ada dependency
+  Laravel Boost yang diinstal — file hanya template bootstrap, tidak dieksekusi.
+
+### Verified
+- Koneksi Laravel → MariaDB (`simonev_db`) berhasil melalui `php artisan migrate`.
+- `php artisan serve` berjalan normal, endpoint dasar (`http://127.0.0.1:8000`)
+  dapat diakses tanpa error.
+- Tidak ada credential (`.env`) ter-track oleh Git (diverifikasi via
+  `git check-ignore`).
+
+### Considered but Rejected
+- Sempat dipertimbangkan penggunaan Supabase/PostgreSQL sebagai alternatif
+  database. Ditolak — tetap pada baseline MySQL/MariaDB, VPS/On-Premise.
+  Tidak diajukan sebagai Change Request karena tidak jadi ada deviasi
+  aktual dari baseline.
+
 ## [2026-08-28] — CR-001: Perubahan Hak Akses, Workflow, dan Struktur Admin
 
 Diproses melalui Change Management Process (`CLAUDE.md` §17): Analyze → Clarify → Proposed Decision → **Approval** → Update Documentation (tahap ini) → Verify → Implement (belum dimulai).
