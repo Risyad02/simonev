@@ -2,13 +2,20 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
-## [2026-08-31] — Phase 2: Instalasi Laravel 13 & Konfigurasi Database (STEP 2.2)
+## [2026-08-31] — Phase 2: Environment Setup Backend & Frontend (STEP 2.2 & 2.3)
 
 ### Added
 - `.gitignore` root untuk backend (Laravel) dan frontend (Vue) — mencegah
   `vendor/`, `node_modules/`, dan `.env` ter-track oleh Git.
 - Laravel 13 (v13.29.0) terinstal di `backend/` via `composer create-project`.
 - Konfigurasi `.env` backend diarahkan ke MariaDB lokal (`simonev_db`) via XAMPP.
+- Vue 3 + Vite terinstal di `frontend/` via `npm create vue@latest`.
+- Dependency frontend: `vue-router@4`, `pinia`, `axios` ditambahkan sesuai
+  baseline stack (tidak ter-include otomatis saat scaffolding karena prompt
+  interaktif CLI tidak tertangkap penuh di Git Bash/MINGW64).
+- Wiring dasar frontend: `main.js` (registrasi Pinia & Router), `App.vue`
+  (root `router-view`), `router/index.js` (1 route awal), `views/HomeView.vue`
+  (halaman placeholder verifikasi).
 
 ### Changed
 - Composer diupdate dari v2.8.12 ke v2.10.3 untuk menutup 8 celah keamanan
@@ -26,15 +33,17 @@ Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang
 - Koneksi Laravel → MariaDB (`simonev_db`) berhasil melalui `php artisan migrate`.
 - `php artisan serve` berjalan normal, endpoint dasar (`http://127.0.0.1:8000`)
   dapat diakses tanpa error.
+- `npm run dev` berjalan normal, aplikasi Vue dapat diakses di
+  `http://localhost:5173` tanpa error.
 - Tidak ada credential (`.env`) ter-track oleh Git (diverifikasi via
-  `git check-ignore`).
+  `git check-ignore`), demikian pula `frontend/node_modules`.
 
 ### Considered but Rejected
 - Sempat dipertimbangkan penggunaan Supabase/PostgreSQL sebagai alternatif
   database. Ditolak — tetap pada baseline MySQL/MariaDB, VPS/On-Premise.
   Tidak diajukan sebagai Change Request karena tidak jadi ada deviasi
   aktual dari baseline.
-
+  
 ## [2026-08-28] — CR-001: Perubahan Hak Akses, Workflow, dan Struktur Admin
 
 Diproses melalui Change Management Process (`CLAUDE.md` §17): Analyze → Clarify → Proposed Decision → **Approval** → Update Documentation (tahap ini) → Verify → Implement (belum dimulai).
