@@ -122,7 +122,8 @@ Operator (input)
 ## 14. Current Phase
 
 > **Phase 1 — Project Foundation** — 🟢 SELESAI (disetujui 2026-08-11)
-> **Phase 2 — Environment Setup** — belum dimulai, menunggu instruksi lanjut dari pemilik proyek
+> **Phase 2 — Environment Setup** — 🟢 SELESAI (2026-08-31) — Laravel 13 & Vue 3+Vite terinstal, terverifikasi berjalan, koneksi MariaDB berhasil
+> **Phase 3 — Database Design & Migration** — belum dimulai, menunggu instruksi lanjut dari pemilik proyek
 
 ## 15. Important Decisions Log
 
@@ -140,6 +141,7 @@ Operator (input)
 | 2026-08-28 | **Architecture Decision (CR-001, AD-3) — Perluasan kewenangan Sekretaris** menjadi Review, Koreksi (kewenangan proses bisnis, mekanisme kembalikan→perbaiki→ajukan ulang, bukan CRUD langsung), Approve, Reject pada tahap rekap lintas bidang — bersifat **non-final** (approve = diteruskan ke Kadis; Kadis tetap pengesah final). Sekretaris = Sekretaris Dinas (Sekdin), **satu role yang sama**, bukan role terpisah. Workflow validasi: Kasubbid → Kabid → Sekretaris (rekap) → Kadis. | Mengakomodasi kebutuhan review/koreksi organisasi tanpa menghapus kendali Kabid atas bidangnya maupun kewenangan pengesahan final Kadis |
 | 2026-08-28 | **Architecture Decision (CR-001, AD-4) — Notifikasi MVP dibatasi kanal email** (Laravel Notification, database + SMTP). WhatsApp/API gateway dicatat sebagai future enhancement, arsitektur tetap channel-agnostic (tidak perlu redesign untuk menambah kanal nanti). | Pertimbangan biaya & keterbatasan API gratis pada tahap awal; baseline notifikasi sudah cukup fleksibel |
 | 2026-08-28 | 4 hal terkait CR-001 ditetapkan **TBD** (belum diputuskan, jangan diimplementasikan): pembagian master data operasional Super Admin vs Admin; akses publikasi/override Super Admin; kewajiban approval Kadis atas revisi target; mekanisme pembuatan Super Admin pertama & berikutnya. Status "Bagian Perencanaan/Perencana sebagai kandidat Admin" dicatat sebagai rencana organisasi, **bukan** Architecture Decision. | Menghindari asumsi/implementasi prematur atas hal yang belum disepakati pemilik proyek |
+| 2026-08-31 | **Phase 2 — Environment Setup dinyatakan selesai.** Laravel 13 (v13.29.0) terinstal di `backend/`, Vue 3 + Vite (+ Vue Router, Pinia, Axios) terinstal di `frontend/`, koneksi ke MariaDB (`simonev_db`) terverifikasi, `php artisan serve` & `npm run dev` berjalan tanpa error. `backend/.env.example` diperbaiki (sebelumnya default sqlite, sekarang mysql sesuai baseline) dan `README.md` dilengkapi agar proses clone-and-run dapat diikuti sesuai Acceptance Criteria. Sempat dipertimbangkan Supabase/PostgreSQL sebagai alternatif database — ditolak, tetap MariaDB/VPS on-premise sesuai baseline. | Acceptance Criteria Phase 2 terpenuhi; persetujuan eksplisit pemilik proyek |
 
 ## 16. Known Limitations (tahap ini)
 

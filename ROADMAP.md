@@ -18,14 +18,19 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Acceptance Criteria**: Seluruh dokumen foundation disetujui pemilik proyek.
 - **Status**: 🟢 **Completed** — diterima final oleh pemilik proyek pada 2026-08-11.
 
-## Phase 2 — Environment Setup — 🟡 NEXT (belum dimulai, menunggu instruksi lanjut)
+## Phase 2 — Environment Setup — 🟢 COMPLETED
 - **Tujuan**: Menyiapkan lingkungan pengembangan lokal & repositori.
 - **Prerequisite**: Phase 1 selesai.
 - **Pekerjaan**: Install Laravel 13 project, install Vue 3 project (Vite), setup `.env`, setup database lokal, setup Git repository & branch strategy.
 - **Output**: Boilerplate backend & frontend berjalan lokal (`php artisan serve`, `npm run dev`).
 - **Testing**: Kedua aplikasi dapat diakses tanpa error di localhost.
 - **Acceptance Criteria**: Tim dapat clone repo dan menjalankan aplikasi mengikuti README dalam < 15 menit.
-
+- **Status**: 🟢 **Completed** — Laravel 13 (v13.29.0) & Vue 3+Vite terinstal dan
+  terverifikasi berjalan (`php artisan serve`, `npm run dev`), koneksi MariaDB
+  (`simonev_db`) berhasil, `.env.example` & `README.md` diperbaiki agar konsisten
+  dengan baseline sehingga proses clone-and-run dapat diikuti sesuai dokumentasi,
+  selesai pada 2026-08-31.
+  
 ## Phase 3 — Database Design & Migration — ⚪
 - **Tujuan**: Mengimplementasikan ERD baseline menjadi migration Laravel.
 - **Prerequisite**: Phase 2 selesai.

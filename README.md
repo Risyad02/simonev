@@ -24,22 +24,38 @@ Laravel 13 · Vue 3 (Options API) · Pinia · MySQL/MariaDB · Sanctum · Spatie
 
 **Super Admin**, **Admin**, Operator, **Kepala Sub Bidang**, Kepala Bidang, Sekretaris (= Sekretaris Dinas/Sekdin), Kepala Dinas, Pimpinan, Publik. Detail RBAC: `docs/architecture/README.md` §2.
 
-## Cara Menjalankan (diisi setelah Phase 2 — Environment Setup)
+## Cara Menjalankan
 
+### Prasyarat
+- PHP 8.3–8.5, Composer 2.x
+- Node.js ≥ 18, npm
+- MariaDB/MySQL aktif (mis. via XAMPP)
+
+### Backend
 ```bash
-# Backend
 cd backend
 composer install
 cp .env.example .env
+```
+Buat database terlebih dahulu di MariaDB (sekali saja, sebelum migrate):
+```bash
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS simonev_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+Lalu:
+```bash
 php artisan key:generate
 php artisan migrate --seed
 php artisan serve
+```
+Backend berjalan di `http://127.0.0.1:8000`.
 
-# Frontend
+### Frontend
+```bash
 cd frontend
 npm install
 npm run dev
 ```
+Frontend berjalan di `http://localhost:5173`.
 
 ## Kontribusi & Alur Kerja
 

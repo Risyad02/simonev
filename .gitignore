@@ -1,0 +1,38 @@
+# ==== Backend (Laravel) ====
+/backend/vendor/
+/backend/node_modules/
+/backend/.env
+/backend/.env.backup
+/backend/.env.production
+/backend/storage/*.key
+/backend/public/hot
+/backend/public/storage
+/backend/storage/app/public/*
+!/backend/storage/app/public/.gitkeep
+/backend/storage/framework/cache/*
+!/backend/storage/framework/cache/.gitkeep
+/backend/storage/framework/sessions/*
+!/backend/storage/framework/sessions/.gitkeep
+/backend/storage/framework/views/*
+!/backend/storage/framework/views/.gitkeep
+/backend/storage/logs/*
+!/backend/storage/logs/.gitkeep
+/backend/bootstrap/cache/*.php
+/backend/.phpunit.result.cache
+
+# ==== Frontend (Vue) ====
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.env
+/frontend/.env.local
+
+# ==== Editor / OS ====
+.idea/
+.vscode/
+*.suo
+.DS_Store
+Thumbs.db
+
+# ==== Misc ====
+*.log
+.phpactor.json
