@@ -2,6 +2,33 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-01] — Phase 3: Database Migration — Kelompok A, B, C (Fondasi Organisasi, Master Data, Struktur Kinerja)
+
+Bagian dari implementasi ERD final Phase 3, hasil Change Management CR-002 (Planning Document Lineage) dan CR-003 (Fleksibilitas & Kategori Indikator). Proses persetujuan penuh (Analyze → Reconcile → Impact Assessment → Decision Matrix → Approval) telah dilakukan sebelum implementasi dimulai.
+
+### Added
+- Migration `units` — struktur organisasi self-referencing (`parent_unit_id`), mendukung hierarki Bidang→Sub Bidang dan level tambahan di masa depan.
+- Migration alter `users` — kolom `unit_id` (nullable, disiapkan untuk RBAC Phase 5) dan `is_active`, sesuai kolom kunci baseline Dokumen Desain §4.3.
+- Migration `units_of_measure`, `formulas`, `reporting_periods` — master data baseline (satuan, formula-as-data, periode pelaporan).
+- Migration `measurement_directions` — master data baru (CR-003.8), merepresentasikan arah pengukuran (naik/turun lebih baik) sebagai data terkonfigurasi, bukan ENUM terkunci.
+- Migration `planning_documents` — tabel baru (CR-002), self-referencing (`parent_document_id`) untuk lineage Renstra→Renja→Renja Perubahan, dengan lifecycle status penuh (`draft, submitted, under_review, approved, active, superseded, rejected`).
+- Migration `performance_structure` — struktur kinerja inti self-referencing (`parent_id`, `level_type`), dengan kolom tambahan `planning_document_id` (nullable, provenance metadata sesuai CR-002) dan `created_by` (audit, sesuai prinsip CR-001 §5).
+- Migration `indicators` — identitas indikator, tertaut wajib ke `performance_structure` via `structure_id` dengan `restrictOnDelete()` (mencegah penghapusan struktur yang masih memiliki indikator, konsisten prinsip versioning-over-overwrite — bukan hard delete).
+
+### Architecture Decisions Referenced
+- **CR-002** (Planning Document Lineage) — Option D "Lineage Tagging": `planning_document_id` sebagai metadata provenance, bukan pengendali versioning. Mekanisme existing (`is_active`, `parent_id`, `revision_no`) tetap satu-satunya penentu status berlaku.
+- **CR-003** (Fleksibilitas Indikator) — kategori indikator (IKU/IKD/dll.) dan direction akan diimplementasikan sebagai tabel terpisah pada kelompok migration berikutnya (`indicator_categories`, `indicator_category_assignments`, kolom tambahan `indicator_versions`).
+
+### Verified
+- Seluruh 7 tabel baru + 1 alter tabel terverifikasi via `php artisan migrate:status`, `SHOW TABLES`, `DESCRIBE`, dan `SHOW INDEX` — dicocokkan manual terhadap isi file migration, bukan diasumsikan dari status Laravel semata.
+- 1 insiden ditemukan dan diperbaiki: migration `add_unit_id_to_users_table` sempat tereksekusi dari isi file kosong/belum tersimpan (tercatat "Ran" di tabel `migrations` tanpa perubahan skema nyata). Diperbaiki dengan menghapus record migration yang salah dari tabel `migrations`, lalu re-run `php artisan migrate` dengan isi file yang benar. Skema akhir terverifikasi sesuai rancangan.
+
+### Not Yet Implemented (menyusul di kelompok migration berikutnya)
+- `indicator_categories`, `indicator_category_assignments`, `indicator_versions` (termasuk kolom `direction_id`, `operational_definition`, `measurement_method`, `data_source`, `planning_document_id`), `targets`, `realizations`, `realization_attachments`, `approval_history`, dan tabel pendukung lain sesuai Migration Plan yang disetujui.
+
+### Impacted Files
+`backend/database/migrations/` (7 file baru), branch `feature/phase3-database-migration`.
+
 ## [2026-08-31] — Phase 2: Environment Setup Backend & Frontend (STEP 2.2 & 2.3)
 
 ### Added
