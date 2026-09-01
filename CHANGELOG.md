@@ -2,6 +2,44 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-01] — Phase 3: Database Migration — Kelompok D, E, F (Konfigurasi Indikator, Realisasi & Validasi, Data Pendukung) — MIGRATION PHASE 3 SELESAI
+
+Penutup seluruh migration inti Phase 3. Bagian dari implementasi ERD final hasil CR-002 (Planning Document Lineage) dan CR-003 (Fleksibilitas & Kategori Indikator), dengan enum status/action final disepakati sebelum implementasi Kelompok E dimulai.
+
+### Added — Kelompok D (Konfigurasi Indikator & Target)
+- Migration `indicator_categories` — master kategori indikator (IKU, IKD/IKK, extensible), sesuai CR-003.6.
+- Migration `indicator_versions` — versi konfigurasi indikator lengkap, mencakup: FK ke `units_of_measure`/`formulas`/`reporting_periods` (baseline), `direction_id` nullable ke `measurement_directions` (CR-003.8), `planning_document_id` nullable (CR-002.4), serta kolom deskriptif `operational_definition`/`measurement_method`/`data_source` (CR-003 §4).
+- Migration `indicator_category_assignments` — junction table dengan audit fields (`assigned_by`, `assigned_at`, `is_active`, `valid_to`), mendukung satu indikator memiliki lebih dari satu kategori sekaligus (CR-003.6), dengan lineage dokumen opsional.
+- Migration `targets` — target per `indicator_version`, dengan `planning_document_id` **NOT NULL** + `restrictOnDelete()` (CR-002.5), menegakkan CR-001 §B (target hanya ditetapkan berdasarkan dokumen resmi) di level database.
+
+### Added — Kelompok E (Realisasi & Validasi Berjenjang)
+- Migration `realizations` — realisasi per target, `status` (string, default `draft`) mengikuti 7 nilai lifecycle final: `draft, diajukan, divalidasi_kasubbid, divalidasi_kabid, direkap_sekretaris, disahkan, dikembalikan`.
+- Migration `realization_attachments` — bukti dukung realisasi, `realization_id` dengan `restrictOnDelete()` (preservasi histori, bukan cascade).
+- Migration `approval_history` — jejak audit transisi status, dengan `action` (`submit | validate | approve | reject | koreksi | recap`) sengaja dipisah dari `from_status`/`to_status` — menegaskan bahwa "Koreksi" adalah tindakan proses bisnis (CR-001 §C), bukan status lifecycle tersendiri.
+
+### Added — Kelompok F (Data Pendukung, Publikasi, Audit, Notifikasi)
+- Migration `supporting_data_categories`, `supporting_data_entries` — modul data pendukung fleksibel (DSSD/SPIP/SAKIP/dll.) dengan skema JSON (`field_schema`, `payload`), sesuai prinsip flexible JSON baseline.
+- Migration `publications` — penanda publikasi ke portal publik, relasi polimorfik (`entity_type`+`entity_id`) tanpa FK database, sesuai baseline Tahap 4 dokumen desain asli.
+- Migration `audit_logs` — jejak audit menyeluruh, append-only (tanpa `updated_at`), polimorfik tanpa FK, `user_id` nullable (log tidak boleh hilang meski user terkait sudah dihapus).
+- Migration `notifications` — notifikasi in-app per user, `user_id` dengan **`restrictOnDelete()`** (direvisi dari draf awal `cascadeOnDelete()` melalui review checkpoint — dipertahankan konsisten dengan prinsip non-destructive di seluruh 20+ FK Phase 3, karena `users.is_active` sudah menjadi mekanisme standar penghapusan non-destruktif).
+
+### Architecture Decisions Referenced
+- **CR-002** (Planning Document Lineage) — selesai diimplementasikan penuh: `planning_documents` + kolom provenance di `performance_structure`, `indicator_versions`, dan `targets` (wajib).
+- **CR-003** (Fleksibilitas Indikator) — selesai diimplementasikan penuh: kategori multi-value, direction sebagai master data, definisi operasional di level versi.
+- Enum status `realizations` (7 nilai) dan struktur `approval_history` (`action` terpisah dari `status`) dikunci sebagai baseline Phase 3, disetujui eksplisit sebelum migration Kelompok E dibuat.
+
+### Verified
+- Seluruh 12 tabel baru terverifikasi via `php artisan migrate:status`, `SHOW TABLES`, `DESCRIBE`, dan `SHOW INDEX` — dicocokkan manual terhadap isi file migration.
+- 1 insiden ditemukan dan diperbaiki: migration `create_notifications_table` sempat tidak mencerminkan revisi `restrictOnDelete()` yang telah disetujui pada checkpoint review (masih `cascadeOnDelete()` di draf awal). Ditemukan sebelum `php artisan migrate` dijalankan, diperbaiki di file sebelum eksekusi — tidak berdampak pada skema database.
+- **Migration inti Phase 3 selesai: 29 tabel total** (28 tabel domain SIMONEV + `migrations`), sesuai ERD final yang disetujui melalui CR-002 + CR-003.
+
+### Not Yet Implemented (menyusul setelah migration Phase 3)
+- Seeder master data awal (`units_of_measure`, `formulas`, `reporting_periods`, `measurement_directions`, `indicator_categories`, dan struktur organisasi awal).
+- `roles`/`user_roles` — tetap ditunda ke Phase 5 (Spatie Laravel-Permission), sesuai keputusan awal proyek.
+
+### Impacted Files
+`backend/database/migrations/` (12 file baru), branch `feature/phase3-database-migration`.
+
 ## [2026-09-01] — Phase 3: Database Migration — Kelompok A, B, C (Fondasi Organisasi, Master Data, Struktur Kinerja)
 
 Bagian dari implementasi ERD final Phase 3, hasil Change Management CR-002 (Planning Document Lineage) dan CR-003 (Fleksibilitas & Kategori Indikator). Proses persetujuan penuh (Analyze → Reconcile → Impact Assessment → Decision Matrix → Approval) telah dilakukan sebelum implementasi dimulai.
