@@ -31,13 +31,20 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
   dengan baseline sehingga proses clone-and-run dapat diikuti sesuai dokumentasi,
   selesai pada 2026-08-31.
   
-## Phase 3 — Database Design & Migration — ⚪
+## Phase 3 — Database Design & Migration — 🟢 COMPLETED
 - **Tujuan**: Mengimplementasikan ERD baseline menjadi migration Laravel.
 - **Prerequisite**: Phase 2 selesai.
 - **Pekerjaan**: Migration seluruh tabel inti (units, users, performance_structure, indicators, indicator_versions, targets, realizations, dst.), seeder master data awal.
 - **Output**: Skema database berjalan via `php artisan migrate`, seeder dasar.
 - **Testing**: Migration & rollback berjalan tanpa error; constraint FK konsisten.
 - **Acceptance Criteria**: Skema sesuai ERD baseline, direview oleh Database Chat.
+- **Status**: 🟢 **Completed** — 29 tabel (21 baru + 1 alter `users`) terimplementasi sesuai
+  ERD final hasil CR-002 (Planning Document Lineage) dan CR-003 (Fleksibilitas &
+  Kategori Indikator). Rollback penuh (21 migration) dan re-migration tervalidasi
+  tanpa error. Seeder 5 tabel master data (`units_of_measure`, `formulas`,
+  `reporting_periods`, `measurement_directions`, `indicator_categories`) terverifikasi
+  idempotent. `roles`/`user_roles` tetap ditunda ke Phase 5 sesuai baseline. Selesai
+  pada 2026-09-02.
 
 ## Phase 4 — Laravel Backend Foundation — ⚪
 - **Tujuan**: Menyiapkan struktur dasar backend (base controller, response helper, exception handler, service layer pattern).

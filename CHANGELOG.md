@@ -2,6 +2,107 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-02] — Phase 3: SELESAI — Rollback/Re-Migration Validation & Master Data Seeder
+
+Penutup Phase 3 — Database Design & Migration. Melengkapi entri migration Kelompok A-F sebelumnya dengan validasi rollback penuh dan seeder master data, memenuhi seluruh Acceptance Criteria `ROADMAP.md` Phase 3.
+
+### Added
+- Seeder master data untuk 5 tabel lookup: `units_of_measure` (8 satuan, FR-03), `formulas` (6 formula type, `expression` sengaja NULL — ditunda ke Phase 4 formula engine, FR-04), `reporting_periods` (4 periode: Bulanan/Triwulanan/Semesteran/Tahunan), `measurement_directions` (3 arah, CR-003.8), `indicator_categories` (IKU, IKD/IKK — extensible, CR-003.9).
+- 5 model Eloquent minimal (`UnitOfMeasure`, `Formula`, `ReportingPeriod`, `MeasurementDirection`, `IndicatorCategory`) sebagai prasyarat teknis seeder — hanya `$fillable`, tanpa business logic/relasi/service (di luar cakupan Phase 3).
+- `DatabaseSeeder.php` diperbarui: scaffold default (`User::factory()`) dihapus, memanggil kelima seeder di atas.
+
+### Verified
+- **Rollback validation**: seluruh 21 migration Phase 3 di-rollback penuh (`migrate:rollback --step=21`, dieksekusi 2 tahap karena kesalahan awal menyamakan step dengan batch — dikoreksi via `migrate:status` sebelum lanjut) tanpa error SQL/FK, tabel terverifikasi hilang total dari database (`SHOW TABLES` → hanya 9 tabel default Laravel tersisa).
+- **Re-migration validation**: seluruh 21 migration dijalankan ulang dari kondisi kosong tanpa error, 29 tabel kembali lengkap.
+- **Seeder idempotency**: `php artisan db:seed` dijalankan 2 kali berurutan (`updateOrCreate()` dengan `name` sebagai natural key aplikatif), jumlah baris identik di kedua run (8/6/4/3/2) — tidak ada duplikat.
+- Seluruh proses (rollback, re-migration, seeder) tidak mengubah file migration maupun schema — working tree tetap clean di setiap checkpoint.
+
+### Incidents (ditemukan & diperbaiki selama proses)
+1. Kesalahan perhitungan `--step` vs jumlah batch pada rollback pertama — terdeteksi via `migrate:status`, dikoreksi dengan menghitung ulang sisa migration dari output nyata.
+2. Model `UnitOfMeasure` sempat menebak nama tabel `unit_of_measures` (konvensi Eloquent default: pluralisasi kata terakhir) padahal tabel aktual `units_of_measure` — diperbaiki dengan `protected $table` eksplisit.
+
+### Phase 3 — Acceptance Criteria (ROADMAP.md)
+| Kriteria | Status |
+|---|---|
+| Skema database berjalan via `php artisan migrate` | ✅ 29 tabel |
+| Seeder dasar | ✅ 5 tabel master data, idempotent |
+| Migration & rollback berjalan tanpa error | ✅ Full rollback + re-migration tervalidasi |
+| Constraint FK konsisten | ✅ |
+| Skema sesuai ERD baseline, direview oleh Database Chat | ✅ ERD final (CR-002 + CR-003) |
+
+### Not Yet Implemented (tetap sesuai batas scope Phase 3)
+- `roles`/`user_roles` — ditunda ke Phase 5 (Spatie Laravel-Permission).
+- `formulas.expression` (formula engine) — Phase 4.
+- Data transaksional (`units`, `users`, `planning_documents`, struktur/indikator/target nyata) — bukan bagian seeder Phase 3.
+
+### Impacted Files
+`backend/database/seeders/` (5 file baru + `DatabaseSeeder.php` modified), `backend/app/Models/` (5 file baru), branch `feature/phase3-database-migration`.
+
+## [2026-09-01] — Phase 3: Database Migration — Kelompok D, E, F (Konfigurasi Indikator, Realisasi & Validasi, Data Pendukung) — MIGRATION PHASE 3 SELESAI
+
+Penutup seluruh migration inti Phase 3. Bagian dari implementasi ERD final hasil CR-002 (Planning Document Lineage) dan CR-003 (Fleksibilitas & Kategori Indikator), dengan enum status/action final disepakati sebelum implementasi Kelompok E dimulai.
+
+### Added — Kelompok D (Konfigurasi Indikator & Target)
+- Migration `indicator_categories` — master kategori indikator (IKU, IKD/IKK, extensible), sesuai CR-003.6.
+- Migration `indicator_versions` — versi konfigurasi indikator lengkap, mencakup: FK ke `units_of_measure`/`formulas`/`reporting_periods` (baseline), `direction_id` nullable ke `measurement_directions` (CR-003.8), `planning_document_id` nullable (CR-002.4), serta kolom deskriptif `operational_definition`/`measurement_method`/`data_source` (CR-003 §4).
+- Migration `indicator_category_assignments` — junction table dengan audit fields (`assigned_by`, `assigned_at`, `is_active`, `valid_to`), mendukung satu indikator memiliki lebih dari satu kategori sekaligus (CR-003.6), dengan lineage dokumen opsional.
+- Migration `targets` — target per `indicator_version`, dengan `planning_document_id` **NOT NULL** + `restrictOnDelete()` (CR-002.5), menegakkan CR-001 §B (target hanya ditetapkan berdasarkan dokumen resmi) di level database.
+
+### Added — Kelompok E (Realisasi & Validasi Berjenjang)
+- Migration `realizations` — realisasi per target, `status` (string, default `draft`) mengikuti 7 nilai lifecycle final: `draft, diajukan, divalidasi_kasubbid, divalidasi_kabid, direkap_sekretaris, disahkan, dikembalikan`.
+- Migration `realization_attachments` — bukti dukung realisasi, `realization_id` dengan `restrictOnDelete()` (preservasi histori, bukan cascade).
+- Migration `approval_history` — jejak audit transisi status, dengan `action` (`submit | validate | approve | reject | koreksi | recap`) sengaja dipisah dari `from_status`/`to_status` — menegaskan bahwa "Koreksi" adalah tindakan proses bisnis (CR-001 §C), bukan status lifecycle tersendiri.
+
+### Added — Kelompok F (Data Pendukung, Publikasi, Audit, Notifikasi)
+- Migration `supporting_data_categories`, `supporting_data_entries` — modul data pendukung fleksibel (DSSD/SPIP/SAKIP/dll.) dengan skema JSON (`field_schema`, `payload`), sesuai prinsip flexible JSON baseline.
+- Migration `publications` — penanda publikasi ke portal publik, relasi polimorfik (`entity_type`+`entity_id`) tanpa FK database, sesuai baseline Tahap 4 dokumen desain asli.
+- Migration `audit_logs` — jejak audit menyeluruh, append-only (tanpa `updated_at`), polimorfik tanpa FK, `user_id` nullable (log tidak boleh hilang meski user terkait sudah dihapus).
+- Migration `notifications` — notifikasi in-app per user, `user_id` dengan **`restrictOnDelete()`** (direvisi dari draf awal `cascadeOnDelete()` melalui review checkpoint — dipertahankan konsisten dengan prinsip non-destructive di seluruh 20+ FK Phase 3, karena `users.is_active` sudah menjadi mekanisme standar penghapusan non-destruktif).
+
+### Architecture Decisions Referenced
+- **CR-002** (Planning Document Lineage) — selesai diimplementasikan penuh: `planning_documents` + kolom provenance di `performance_structure`, `indicator_versions`, dan `targets` (wajib).
+- **CR-003** (Fleksibilitas Indikator) — selesai diimplementasikan penuh: kategori multi-value, direction sebagai master data, definisi operasional di level versi.
+- Enum status `realizations` (7 nilai) dan struktur `approval_history` (`action` terpisah dari `status`) dikunci sebagai baseline Phase 3, disetujui eksplisit sebelum migration Kelompok E dibuat.
+
+### Verified
+- Seluruh 12 tabel baru terverifikasi via `php artisan migrate:status`, `SHOW TABLES`, `DESCRIBE`, dan `SHOW INDEX` — dicocokkan manual terhadap isi file migration.
+- 1 insiden ditemukan dan diperbaiki: migration `create_notifications_table` sempat tidak mencerminkan revisi `restrictOnDelete()` yang telah disetujui pada checkpoint review (masih `cascadeOnDelete()` di draf awal). Ditemukan sebelum `php artisan migrate` dijalankan, diperbaiki di file sebelum eksekusi — tidak berdampak pada skema database.
+- **Migration inti Phase 3 selesai: 29 tabel total** (28 tabel domain SIMONEV + `migrations`), sesuai ERD final yang disetujui melalui CR-002 + CR-003.
+
+### Not Yet Implemented (menyusul setelah migration Phase 3)
+- Seeder master data awal (`units_of_measure`, `formulas`, `reporting_periods`, `measurement_directions`, `indicator_categories`, dan struktur organisasi awal).
+- `roles`/`user_roles` — tetap ditunda ke Phase 5 (Spatie Laravel-Permission), sesuai keputusan awal proyek.
+
+### Impacted Files
+`backend/database/migrations/` (12 file baru), branch `feature/phase3-database-migration`.
+
+## [2026-09-01] — Phase 3: Database Migration — Kelompok A, B, C (Fondasi Organisasi, Master Data, Struktur Kinerja)
+
+Bagian dari implementasi ERD final Phase 3, hasil Change Management CR-002 (Planning Document Lineage) dan CR-003 (Fleksibilitas & Kategori Indikator). Proses persetujuan penuh (Analyze → Reconcile → Impact Assessment → Decision Matrix → Approval) telah dilakukan sebelum implementasi dimulai.
+
+### Added
+- Migration `units` — struktur organisasi self-referencing (`parent_unit_id`), mendukung hierarki Bidang→Sub Bidang dan level tambahan di masa depan.
+- Migration alter `users` — kolom `unit_id` (nullable, disiapkan untuk RBAC Phase 5) dan `is_active`, sesuai kolom kunci baseline Dokumen Desain §4.3.
+- Migration `units_of_measure`, `formulas`, `reporting_periods` — master data baseline (satuan, formula-as-data, periode pelaporan).
+- Migration `measurement_directions` — master data baru (CR-003.8), merepresentasikan arah pengukuran (naik/turun lebih baik) sebagai data terkonfigurasi, bukan ENUM terkunci.
+- Migration `planning_documents` — tabel baru (CR-002), self-referencing (`parent_document_id`) untuk lineage Renstra→Renja→Renja Perubahan, dengan lifecycle status penuh (`draft, submitted, under_review, approved, active, superseded, rejected`).
+- Migration `performance_structure` — struktur kinerja inti self-referencing (`parent_id`, `level_type`), dengan kolom tambahan `planning_document_id` (nullable, provenance metadata sesuai CR-002) dan `created_by` (audit, sesuai prinsip CR-001 §5).
+- Migration `indicators` — identitas indikator, tertaut wajib ke `performance_structure` via `structure_id` dengan `restrictOnDelete()` (mencegah penghapusan struktur yang masih memiliki indikator, konsisten prinsip versioning-over-overwrite — bukan hard delete).
+
+### Architecture Decisions Referenced
+- **CR-002** (Planning Document Lineage) — Option D "Lineage Tagging": `planning_document_id` sebagai metadata provenance, bukan pengendali versioning. Mekanisme existing (`is_active`, `parent_id`, `revision_no`) tetap satu-satunya penentu status berlaku.
+- **CR-003** (Fleksibilitas Indikator) — kategori indikator (IKU/IKD/dll.) dan direction akan diimplementasikan sebagai tabel terpisah pada kelompok migration berikutnya (`indicator_categories`, `indicator_category_assignments`, kolom tambahan `indicator_versions`).
+
+### Verified
+- Seluruh 7 tabel baru + 1 alter tabel terverifikasi via `php artisan migrate:status`, `SHOW TABLES`, `DESCRIBE`, dan `SHOW INDEX` — dicocokkan manual terhadap isi file migration, bukan diasumsikan dari status Laravel semata.
+- 1 insiden ditemukan dan diperbaiki: migration `add_unit_id_to_users_table` sempat tereksekusi dari isi file kosong/belum tersimpan (tercatat "Ran" di tabel `migrations` tanpa perubahan skema nyata). Diperbaiki dengan menghapus record migration yang salah dari tabel `migrations`, lalu re-run `php artisan migrate` dengan isi file yang benar. Skema akhir terverifikasi sesuai rancangan.
+
+### Not Yet Implemented (menyusul di kelompok migration berikutnya)
+- `indicator_categories`, `indicator_category_assignments`, `indicator_versions` (termasuk kolom `direction_id`, `operational_definition`, `measurement_method`, `data_source`, `planning_document_id`), `targets`, `realizations`, `realization_attachments`, `approval_history`, dan tabel pendukung lain sesuai Migration Plan yang disetujui.
+
+### Impacted Files
+`backend/database/migrations/` (7 file baru), branch `feature/phase3-database-migration`.
+
 ## [2026-08-31] — Phase 2: Environment Setup Backend & Frontend (STEP 2.2 & 2.3)
 
 ### Added
