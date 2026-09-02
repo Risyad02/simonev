@@ -2,6 +2,42 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-02] — Phase 3: SELESAI — Rollback/Re-Migration Validation & Master Data Seeder
+
+Penutup Phase 3 — Database Design & Migration. Melengkapi entri migration Kelompok A-F sebelumnya dengan validasi rollback penuh dan seeder master data, memenuhi seluruh Acceptance Criteria `ROADMAP.md` Phase 3.
+
+### Added
+- Seeder master data untuk 5 tabel lookup: `units_of_measure` (8 satuan, FR-03), `formulas` (6 formula type, `expression` sengaja NULL — ditunda ke Phase 4 formula engine, FR-04), `reporting_periods` (4 periode: Bulanan/Triwulanan/Semesteran/Tahunan), `measurement_directions` (3 arah, CR-003.8), `indicator_categories` (IKU, IKD/IKK — extensible, CR-003.9).
+- 5 model Eloquent minimal (`UnitOfMeasure`, `Formula`, `ReportingPeriod`, `MeasurementDirection`, `IndicatorCategory`) sebagai prasyarat teknis seeder — hanya `$fillable`, tanpa business logic/relasi/service (di luar cakupan Phase 3).
+- `DatabaseSeeder.php` diperbarui: scaffold default (`User::factory()`) dihapus, memanggil kelima seeder di atas.
+
+### Verified
+- **Rollback validation**: seluruh 21 migration Phase 3 di-rollback penuh (`migrate:rollback --step=21`, dieksekusi 2 tahap karena kesalahan awal menyamakan step dengan batch — dikoreksi via `migrate:status` sebelum lanjut) tanpa error SQL/FK, tabel terverifikasi hilang total dari database (`SHOW TABLES` → hanya 9 tabel default Laravel tersisa).
+- **Re-migration validation**: seluruh 21 migration dijalankan ulang dari kondisi kosong tanpa error, 29 tabel kembali lengkap.
+- **Seeder idempotency**: `php artisan db:seed` dijalankan 2 kali berurutan (`updateOrCreate()` dengan `name` sebagai natural key aplikatif), jumlah baris identik di kedua run (8/6/4/3/2) — tidak ada duplikat.
+- Seluruh proses (rollback, re-migration, seeder) tidak mengubah file migration maupun schema — working tree tetap clean di setiap checkpoint.
+
+### Incidents (ditemukan & diperbaiki selama proses)
+1. Kesalahan perhitungan `--step` vs jumlah batch pada rollback pertama — terdeteksi via `migrate:status`, dikoreksi dengan menghitung ulang sisa migration dari output nyata.
+2. Model `UnitOfMeasure` sempat menebak nama tabel `unit_of_measures` (konvensi Eloquent default: pluralisasi kata terakhir) padahal tabel aktual `units_of_measure` — diperbaiki dengan `protected $table` eksplisit.
+
+### Phase 3 — Acceptance Criteria (ROADMAP.md)
+| Kriteria | Status |
+|---|---|
+| Skema database berjalan via `php artisan migrate` | ✅ 29 tabel |
+| Seeder dasar | ✅ 5 tabel master data, idempotent |
+| Migration & rollback berjalan tanpa error | ✅ Full rollback + re-migration tervalidasi |
+| Constraint FK konsisten | ✅ |
+| Skema sesuai ERD baseline, direview oleh Database Chat | ✅ ERD final (CR-002 + CR-003) |
+
+### Not Yet Implemented (tetap sesuai batas scope Phase 3)
+- `roles`/`user_roles` — ditunda ke Phase 5 (Spatie Laravel-Permission).
+- `formulas.expression` (formula engine) — Phase 4.
+- Data transaksional (`units`, `users`, `planning_documents`, struktur/indikator/target nyata) — bukan bagian seeder Phase 3.
+
+### Impacted Files
+`backend/database/seeders/` (5 file baru + `DatabaseSeeder.php` modified), `backend/app/Models/` (5 file baru), branch `feature/phase3-database-migration`.
+
 ## [2026-09-01] — Phase 3: Database Migration — Kelompok D, E, F (Konfigurasi Indikator, Realisasi & Validasi, Data Pendukung) — MIGRATION PHASE 3 SELESAI
 
 Penutup seluruh migration inti Phase 3. Bagian dari implementasi ERD final hasil CR-002 (Planning Document Lineage) dan CR-003 (Fleksibilitas & Kategori Indikator), dengan enum status/action final disepakati sebelum implementasi Kelompok E dimulai.
