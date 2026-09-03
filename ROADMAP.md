@@ -46,13 +46,14 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
   idempotent. `roles`/`user_roles` tetap ditunda ke Phase 5 sesuai baseline. Selesai
   pada 2026-09-02.
 
-## Phase 4 — Laravel Backend Foundation — ⚪
+## Phase 4 — Laravel Backend Foundation — 🟢 COMPLETED
 - **Tujuan**: Menyiapkan struktur dasar backend (base controller, response helper, exception handler, service layer pattern).
 - **Prerequisite**: Phase 3 selesai.
 - **Pekerjaan**: Base API response format, error handling global, struktur folder `app/Services`, `app/Http/Requests`.
 - **Output**: Kerangka backend siap dipakai fitur.
 - **Testing**: Endpoint health-check berjalan dengan format response standar.
 - **Acceptance Criteria**: Format response API konsisten sesuai `CLAUDE.md` §API Conventions.
+- **Status**: 🟢 **Completed** — `ApiResponseTrait` + `BaseController` + exception handler global (`bootstrap/app.php`) terimplementasi, format response `{success,data,message}`/`{success,errors,message}` konsisten di jalur sukses maupun error. Endpoint health-check (`GET /api/v1/health`) berjalan dan terverifikasi via `curl` + 2 Feature Test (`php artisan test --filter=HealthTest`, 2 passed). Pola Service Layer (tanpa Repository, Controller → Service → Eloquent Model) disepakati dan didemonstrasikan via `HealthCheckService`. `app/Http/Requests/` (folder fisik) sengaja ditunda ke Phase 6 — belum ada domain data nyata di Phase 4. Selesai pada 2026-09-03.
 
 ## Phase 5 — Authentication & RBAC — ⚪
 - **Tujuan**: Login/logout, Sanctum token, role & permission (9 role: Super Admin, Admin, Operator, Kepala Sub Bidang, Kepala Bidang, Sekretaris, Kepala Dinas, Pimpinan, Publik — per CR-001).
