@@ -2,6 +2,44 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-03] — Phase 4: SELESAI — Laravel Backend Foundation
+
+Penutup Phase 4 — Laravel Backend Foundation. Menyiapkan fondasi struktur backend (response helper, base controller, exception handler global, pola service layer) sebagai kerangka yang akan diikuti seluruh fase CRUD berikutnya (Phase 6–16), memenuhi Acceptance Criteria `ROADMAP.md` Phase 4.
+
+### Added
+- `app/Http/Traits/ApiResponseTrait.php` — helper `success()`/`error()`, menegakkan format response standar `CLAUDE.md` §7: `{ success: true, data, message }` untuk sukses, `{ success: false, errors, message }` untuk gagal.
+- `app/Http/Controllers/Api/V1/BaseController.php` — abstract base controller, `use ApiResponseTrait`; seluruh controller resource ke depan extends class ini.
+- `app/Http/Controllers/Api/V1/HealthController.php` — endpoint health-check pertama (`GET /api/v1/health`), sebagai bukti verifikasi format response Phase 4.
+- `app/Services/HealthCheckService.php` — contoh/referensi pola Service Layer (Controller → Service → Eloquent Model langsung, **tanpa Repository terpisah** — keputusan disepakati eksplisit, lihat Architecture Decisions Referenced). Tidak menyentuh database (belum ada domain data nyata di Phase 4); murni referensi struktur untuk Phase 6 dst.
+- `routes/api.php` — didaftarkan manual di `bootstrap/app.php` (`api:` + `apiPrefix: 'api/v1'`), **tanpa** menjalankan `php artisan install:api` agar Laravel Sanctum tidak ikut terinstal prematur (tetap murni scope Phase 5).
+- Exception handler global di `bootstrap/app.php` (`->withExceptions()`) — menangani `ValidationException` (422), `AuthenticationException` (401), `AuthorizationException` (403), `ModelNotFoundException`/`NotFoundHttpException` (404), dan `Throwable` generik (500, detail pesan disembunyikan bila `APP_DEBUG=false`) — seluruhnya mengembalikan format `{ success: false, errors, message }` konsisten untuk rute `/api/*`.
+- `tests/Feature/Api/V1/HealthTest.php` — 2 Feature Test: happy path (`GET /api/v1/health` → 200, struktur response sesuai kontrak) dan error path (rute API tidak dikenal → 404, membuktikan exception handler global bekerja).
+
+### Architecture Decisions Referenced
+- **Service Layer tanpa Repository pattern** — disepakati eksplisit sebagai pola 2 lapis (Controller → Service → Eloquent Model), bukan 3 lapis dengan Repository interface terpisah (seperti pola umum di C#/.NET). Alasan: Eloquent sudah merupakan lapisan abstraksi data (Active Record + Query Builder); menambah Repository dianggap duplikasi abstraksi untuk skala proyek ini (1 Perangkat Daerah, tim kecil, tidak ada rencana ganti database engine — Supabase/PostgreSQL sudah ditolak eksplisit); sesuai `CLAUDE.md` §3 prinsip Maintainability. Repository dapat diajukan sebagai Architecture Decision terpisah di masa depan bila kebutuhan nyata muncul.
+- **`routes/api.php` didaftarkan manual**, bukan via `php artisan install:api` — keputusan teknis eksplisit untuk mencegah Sanctum terinstal sebelum Phase 5, menjaga urutan fase roadmap (`CLAUDE.md` §12).
+
+### Verified
+- `GET /api/v1/health` → `200 OK`, `Content-Type: application/json`, body `{"success":true,"data":{"status":"ok","timestamp":"...","checked_by":"HealthCheckService"},"message":"API SIMONEV berjalan normal"}` — diverifikasi manual via `curl`.
+- `GET /api/v1/<rute-tidak-ada>` → `404 Not Found`, body `{"success":false,"errors":null,"message":"Data tidak ditemukan"}` — membuktikan exception handler global aktif untuk rute API (bukan halaman HTML default Laravel).
+- Feature Test: `php artisan test --filter=HealthTest` → **2 passed (13 assertions)**.
+
+### Phase 4 — Acceptance Criteria (ROADMAP.md)
+| Kriteria | Status |
+|---|---|
+| Format response API konsisten sesuai `CLAUDE.md` §7 | ✅ |
+| Endpoint health-check berjalan dengan format response standar | ✅ |
+| Struktur folder `app/Services`, `app/Http/Requests` disiapkan | ✅ `app/Services` (dengan contoh) — `app/Http/Requests` konvensi disepakati, folder fisik ditunda ke Phase 6 (belum ada domain data nyata) |
+
+### Not Yet Implemented (tetap sesuai batas scope Phase 4)
+- `app/Http/Requests/` (folder fisik + FormRequest per domain) — menyusul Phase 6 saat ada domain data nyata untuk divalidasi.
+- `app/Policies/` — prasyarat Spatie Laravel-Permission, Phase 5.
+- `app/Notifications/` — scope Phase 16.
+- Laravel Sanctum — tetap murni Phase 5, sengaja tidak terinstal di Phase 4 ini.
+
+### Impacted Files
+`backend/bootstrap/app.php`, `backend/routes/api.php` (baru), `backend/app/Http/Traits/ApiResponseTrait.php` (baru), `backend/app/Http/Controllers/Api/V1/BaseController.php` (baru), `backend/app/Http/Controllers/Api/V1/HealthController.php` (baru), `backend/app/Services/HealthCheckService.php` (baru), `backend/tests/Feature/Api/V1/HealthTest.php` (baru), branch `feature/phase4-backend-foundation`.
+
 ## [2026-09-02] — Phase 3: SELESAI — Rollback/Re-Migration Validation & Master Data Seeder
 
 Penutup Phase 3 — Database Design & Migration. Melengkapi entri migration Kelompok A-F sebelumnya dengan validasi rollback penuh dan seeder master data, memenuhi seluruh Acceptance Criteria `ROADMAP.md` Phase 3.
