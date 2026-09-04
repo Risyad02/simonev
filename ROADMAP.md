@@ -55,13 +55,14 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Acceptance Criteria**: Format response API konsisten sesuai `CLAUDE.md` §API Conventions.
 - **Status**: 🟢 **Completed** — `ApiResponseTrait` + `BaseController` + exception handler global (`bootstrap/app.php`) terimplementasi, format response `{success,data,message}`/`{success,errors,message}` konsisten di jalur sukses maupun error. Endpoint health-check (`GET /api/v1/health`) berjalan dan terverifikasi via `curl` + 2 Feature Test (`php artisan test --filter=HealthTest`, 2 passed). Pola Service Layer (tanpa Repository, Controller → Service → Eloquent Model) disepakati dan didemonstrasikan via `HealthCheckService`. `app/Http/Requests/` (folder fisik) sengaja ditunda ke Phase 6 — belum ada domain data nyata di Phase 4. Selesai pada 2026-09-03.
 
-## Phase 5 — Authentication & RBAC — ⚪
-- **Tujuan**: Login/logout, Sanctum token, role & permission (9 role: Super Admin, Admin, Operator, Kepala Sub Bidang, Kepala Bidang, Sekretaris, Kepala Dinas, Pimpinan, Publik — per CR-001).
+## Phase 5 — Authentication & RBAC — 🟢 COMPLETED
+- **Tujuan**: Login/logout, Sanctum token, role & permission (9 role: Super Admin, Admin, Operator, Kepala Sub Bidang, Kepala Bidang, Sekretaris,Kepala Dinas, Pimpinan, Publik — per CR-001).
 - **Prerequisite**: Phase 4 selesai; keempat TBD CR-001 (§CLAUDE.md §8) idealnya sudah dijawab sebelum seeder permission final ditulis — jika belum, seeder permission untuk item TBD dibuat menyusul, jangan diasumsikan.
 - **Pekerjaan**: Setup Sanctum, setup Spatie Permission, seeder role & permission (termasuk permission Sekretaris: review/koreksi/approve-rekap/reject-rekap, dan permission Super Admin: user.manage/system.manage), middleware proteksi route.
 - **Output**: API auth berjalan; RBAC matrix (CR-001) ter-enforce di backend.
-- **Testing**: Feature test login/logout/akses ditolak sesuai role; test khusus memastikan Approve Sekretaris tidak menghasilkan status final.
+- **Testing**: Feature test login/logout/akses ditolak sesuai role; testkhusus memastikan Approve Sekretaris tidak menghasilkan status final.
 - **Acceptance Criteria**: Semua 9 role dapat login dan hanya mengakses modul sesuai matrix RBAC (`docs/architecture/README.md` §2.4).
+- **Status**: 🟢 **Completed** — Sanctum + Spatie Laravel-Permission terinstal dan dimigrasi. 9 role, 36 permission (32 assignable + 4 TBD CR-001 sengaja unassigned) ter-seed sesuai RBAC Matrix penuh. Middleware alias (`role`/`permission`/`role_or_permission`) terdaftar, dibuktikan bekerja end-to-end via endpoint internal `/api/v1/test-permission`. 10 Feature Test lulus (24 assertions), termasuk 2 test constraint kritis: Sekretaris tidak memiliki `realization.finalize.kadis` (hanya `kepala_dinas`). Audit `$fillable` `unit_id` pada model `User` dilakukan — diputuskan **tidak** ditambahkan (parameter otorisasi, bukan field netral; menunggu Service User Management terkait CR-001 TBD-4). Endpoint bisnis (target/realisasi/dll.) sengaja belum dibuat — tetap scope Phase 6+. Selesai pada 2026-09-04.
 
 ## Phase 6 — Master Data — ⚪
 - **Tujuan**: CRUD satuan, formula, periode pelaporan, unit/bidang.

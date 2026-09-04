@@ -2,6 +2,55 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-04] — Phase 5: SELESAI — Authentication & RBAC
+
+Penutup Phase 5 — Authentication & RBAC. Menyiapkan fondasi autentikasi (Laravel Sanctum) dan otorisasi (Spatie Laravel-Permission) untuk 9 role sesuai CR-001, dengan constraint bisnis kritis (Approve Sekretaris non-final) terverifikasi otomatis via Feature Test — sebagai fondasi middleware proteksi route untuk seluruh endpoint bisnis Phase 6 dan seterusnya.
+
+### Added
+- Laravel Sanctum (`^4.3`) — autentikasi token-based API. `personal_access_tokens` table (migration `2026_09_03_084438`).
+- Spatie Laravel-Permission (`^8.3`) — RBAC. 5 tabel (`roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`) via migration `2026_09_03_132148`.
+- `app/Models/User.php` — trait `HasApiTokens` (Sanctum) dan `HasRoles` (Spatie) ditambahkan.
+- `app/Http/Requests/Auth/LoginRequest.php` — validasi `email`/`password`, pesan Bahasa Indonesia.
+- `app/Http/Controllers/Api/V1/AuthController.php` — 3 endpoint: `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`. Login memakai `Hash::check()` manual + `createToken()` (pola stateless API, bukan `Auth::attempt()` berbasis session).
+- `database/seeders/RoleSeeder.php` — 9 role sesuai CR-001 (`super_admin`, `admin`, `operator`, `kepala_sub_bidang`, `kepala_bidang`, `sekretaris`, `kepala_dinas`, `pimpinan`, `publik`), `guard_name: 'web'` (diverifikasi cocok dengan `config/auth.php` `defaults.guard`).
+- `database/seeders/PermissionSeeder.php` — 36 permission, dipetakan 1:1 terhadap seluruh baris RBAC Matrix `docs/architecture/README.md` §2.4: 32 permission assignable + **4 permission TBD CR-001 (dibuat, sengaja tidak di-assign ke role manapun)**: `master-data-operasional.manage` (TBD-1), `structure.approve-revision` & `target.approve-revision` (TBD-3), `public-portal.override` (TBD-2).
+- `database/seeders/RolePermissionSeeder.php` — assignment permission ke 9 role sesuai matrix, dengan komentar eksplisit menandai 4 permission TBD yang sengaja tidak di-assign.
+- `bootstrap/app.php` — alias middleware Spatie (`role`, `permission`, `role_or_permission`) terdaftar di `withMiddleware()`.
+- `app/Http/Controllers/Api/V1/TestPermissionController.php` + route `GET /api/v1/test-permission` (`middleware: auth:sanctum, permission:user.manage`) — endpoint internal, bukan bagian API bisnis, murni untuk membuktikan integrasi Sanctum + Spatie + middleware bekerja end-to-end.
+- `tests/Feature/Api/V1/PermissionMiddlewareTest.php` — 6 Feature Test: akses diterima (permission ada), akses ditolak (permission tidak ada, 403), akses ditolak (belum autentikasi, 401), seeder role/permission dapat dipakai middleware, **dan 2 test constraint bisnis kritis**: Sekretaris tidak punya `realization.finalize.kadis`, dan permission tersebut hanya dimiliki `kepala_dinas`.
+- `tests/TestCase.php` — trait `RefreshDatabase` ditambahkan (sebelumnya kosong), diperlukan agar Feature Test RBAC punya database bersih per test run (SQLite in-memory, sesuai `phpunit.xml`).
+
+### Architecture Decisions Referenced
+- **Permission granularity per-scope** (bukan permission generik) — dashboard (5 varian: `full`/`operational`/`own-scope`/`cross-unit`/`strategic-summary`) dan realization (4 varian: `manage`/`manage.backup`/`view`/`view.cross-unit`) dipisah eksplisit agar RBAC matrix lebih auditable, sesuai kewenangan berbeda per role di `docs/architecture/README.md` §2.4.
+- **4 permission TBD CR-001: dibuat, tidak di-assign** — bukan ditunda pembuatannya, bukan pula ditebak assignment-nya. Permission exist di database (siap dipakai) tapi sengaja tidak terhubung ke role manapun sampai keputusan CR-001 resmi turun — mengurangi effort saat TBD dijawab (cukup edit `RolePermissionSeeder`, tanpa migration/seeder permission baru).
+- **`guard_name: 'web'` untuk seluruh role/permission**, meski autentikasi API memakai `auth:sanctum` — karena Spatie menentukan guard berdasarkan `config('auth.defaults.guard')` (`'web'`), bukan guard aktif saat request; instance `User` yang dikembalikan Sanctum tetap sama, sehingga `hasRole()`/`can()` tetap bekerja benar. Diverifikasi terhadap `config/auth.php` sebelum seeder dijalankan.
+- **`unit_id` TIDAK ditambahkan ke `$fillable` model `User`** — hasil audit eksplisit (INSPECT → ANALYZE → DECIDE). `unit_id` adalah parameter otorisasi (menentukan scope akses data), bukan field profil netral; mass assignment umum berisiko membuka celah self-reassignment unit tanpa kontrol. Assignment akan dilakukan via property langsung (`$user->unit_id = ...; $user->save();`) di dalam Service User Management pada fase mendatang, terkait CR-001 TBD-4 (mekanisme pembuatan Super Admin pertama) yang masih terbuka.
+
+### Verified
+- Login/logout/me diverifikasi manual via Postman: login → token diterbitkan; `/me` dengan token valid → 200; logout → token revoked; `/me` dengan token yang sudah logout → `401 Tidak terautentikasi`.
+- Data seeder diverifikasi via Tinker: `Role::count()` = 9, `Permission::count()` = 36, keempat permission TBD `roles()->count()` = 0 untuk semua, `sekretaris->permissions` (9 item, tanpa `realization.finalize.kadis`), `realization.finalize.kadis->roles` = `['kepala_dinas']` saja.
+- Feature Test: `php artisan test` → **10 passed (24 assertions)** — mencakup `HealthTest`/`ExampleTest` existing (tanpa regresi setelah `RefreshDatabase` ditambahkan) + 6 test RBAC baru.
+- Migration Phase 3 (21 file) terbukti kompatibel penuh dengan SQLite in-memory (testing environment) tanpa modifikasi apapun.
+
+### Incidents (ditemukan & diperbaiki selama proses)
+1. Docblock method `casts()` di `User.php` sempat terhapus tidak sengaja saat edit manual (kemungkinan efek auto-format editor) — ditemukan saat review `git diff` di Langkah 6 audit `unit_id`, dikembalikan sebelum closure.
+2. Re-indentasi otomatis pada blok `withExceptions()` di `bootstrap/app.php` (dari 8-spasi tidak konsisten menjadi 4-spasi konsisten) — efek samping editor saat menyunting `withMiddleware()` di file yang sama. Dinilai perbaikan positif (memperbaiki inkonsistensi sejak Phase 4), dibiarkan, diverifikasi tidak mengubah perilaku (10 test tetap lulus).
+
+### Phase 5 — Acceptance Criteria (ROADMAP.md)
+| Kriteria | Status |
+|---|---|
+| Semua 9 role dapat login | ✅ Diverifikasi manual (login endpoint universal, tidak bergantung role) |
+| Akses hanya sesuai matrix RBAC (`docs/architecture/README.md` §2.4) | ✅ Middleware `permission:` diverifikasi end-to-end via `/test-permission` + Feature Test |
+| Approve Sekretaris tidak menghasilkan status final | ✅ **Terverifikasi eksplisit** — Sekretaris tidak memiliki `realization.finalize.kadis`, permission tersebut hanya milik `kepala_dinas` |
+
+### Not Yet Implemented (tetap sesuai batas scope Phase 5)
+- Endpoint bisnis (target, realisasi, struktur kinerja, indikator, publikasi) — tetap Phase 6 dan seterusnya sesuai roadmap; middleware `permission:` baru diterapkan di endpoint dummy testing (`/test-permission`), bukan endpoint bisnis nyata.
+- Service/Policy User Management (assignment `unit_id`, pembuatan Super Admin pertama) — menunggu keputusan CR-001 TBD-4.
+- 4 permission TBD CR-001 tetap unassigned — menunggu keputusan resmi.
+
+### Impacted Files
+`backend/app/Models/User.php`, `backend/bootstrap/app.php`, `backend/routes/api.php`, `backend/tests/TestCase.php`, `backend/composer.json`, `backend/composer.lock` (modified); `backend/app/Http/Controllers/Api/V1/AuthController.php`, `backend/app/Http/Controllers/Api/V1/TestPermissionController.php`, `backend/app/Http/Requests/Auth/LoginRequest.php`, `backend/config/sanctum.php`, `backend/config/permission.php`, `backend/database/migrations/2026_09_03_084438_create_personal_access_tokens_table.php`, `backend/database/migrations/2026_09_03_132148_create_permission_tables.php`, `backend/database/seeders/RoleSeeder.php`, `backend/database/seeders/PermissionSeeder.php`, `backend/database/seeders/RolePermissionSeeder.php`, `backend/database/seeders/DatabaseSeeder.php` (modified), `backend/tests/Feature/Api/V1/PermissionMiddlewareTest.php` (baru); branch `feature/phase5-auth-rbac`.
+
 ## [2026-09-03] — Phase 4: SELESAI — Laravel Backend Foundation
 
 Penutup Phase 4 — Laravel Backend Foundation. Menyiapkan fondasi struktur backend (response helper, base controller, exception handler global, pola service layer) sebagai kerangka yang akan diikuti seluruh fase CRUD berikutnya (Phase 6–16), memenuhi Acceptance Criteria `ROADMAP.md` Phase 4.
