@@ -2,6 +2,33 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-10] — Phase 6: Master Data — Implementation
+
+### Added
+- CRUD lengkap untuk 4 entitas master data sesuai scope `ROADMAP.md` Phase 6: **Satuan** (`units_of_measure`), **Formula** (`formulas`), **Periode Pelaporan** (`reporting_periods`), **Unit/Bidang** (`units`).
+- Model baru `App\Models\Unit` (belum ada sejak Phase 3) dengan relasi `parent()`, `children()`, `users()`.
+- Pola `Controller → FormRequest → Service → Model/Query Builder` diterapkan konsisten untuk keempat entitas, tanpa Repository, mengikuti baseline Service Layer.
+- Delete guard eksplisit di Service layer untuk `units_of_measure`, `formulas`, `reporting_periods` — memeriksa referensi ke `indicator_versions` sebelum delete, mengembalikan `409 Conflict` terstruktur via `ApiResponseTrait` (bukan mengandalkan `QueryException` mentah dari `restrictOnDelete()` di database, yang tetap dipertahankan sebagai lapisan proteksi terakhir).
+- Mekanisme deactivate/activate untuk `units` (`PATCH /units/{id}/deactivate`, `PATCH /units/{id}/activate`) menggantikan hard delete — **tidak ada endpoint `DELETE` fisik untuk `units`**, sesuai prinsip §3.1 (Versioning over Overwrite) dan keputusan governance eksplisit bahwa unit adalah bagian struktur organisasi yang harus mempertahankan histori.
+- Guard deactivate `units`: menolak (409) jika unit memiliki user aktif (`users.is_active=true`) atau child unit aktif. Guard activate: menolak (409) jika parent unit sedang nonaktif.
+- Guard circular hierarchy pada update `parent_unit_id` (unit tidak boleh menjadi leluhur dirinya sendiri).
+- 30 Feature Test baru (semua lulus, 60 assertions gabungan across 4 file test) mencakup: happy path CRUD, validasi (required/unique/format), authorization per permission boundary, delete-guard reference check, dan deactivate/activate guard.
+
+### RBAC Boundary (mengikuti baseline final Phase 5 — tidak ada perubahan assignment)
+- `formulas` diklasifikasikan sebagai **master data kritis** (§2.2 `docs/architecture/README.md`) — endpoint `GET` memakai `master-data-kritis.view|master-data-kritis.manage`; endpoint mutasi (`POST/PUT/PATCH/DELETE`) memakai `master-data-kritis.manage` (Super Admin-only, sesuai assignment Phase 5).
+- `units_of_measure`, `reporting_periods`, `units` diklasifikasikan sebagai **master data operasional** (§2.4 RBAC Matrix) — seluruh endpoint memakai `master-data-operasional.manage`.
+- **`master-data-operasional.manage` TETAP TIDAK di-assign ke role manapun** — TBD-1 CR-001 tetap terbuka, tidak diselesaikan secara diam-diam melalui implementasi Phase 6 ini. Endpoint tersedia dan terproteksi middleware, tetapi tidak dapat diakses oleh role manapun sampai TBD-1 diputuskan secara formal.
+
+### Documentation Sync — Wording ROADMAP.md Diselaraskan
+- Wording lama `ROADMAP.md` Phase 6 ("Modul master data berfungsi penuh (**Admin only**)"; "**Admin dapat CRUD seluruh master data**") ditulis sebelum RBAC Matrix final (CR-001) memperkenalkan klasifikasi master data kritis vs operasional secara terpisah — wording tersebut adalah baseline awal yang belum tersinkronisasi, bukan keputusan authorization yang mengikat.
+- Acceptance Criteria Phase 6 disinkronkan mengikuti RBAC Matrix final sebagai sumber kebenaran authorization: keberhasilan Phase 6 diukur dari ketersediaan CRUD sesuai scope, penerapan middleware permission yang benar, dan authorization backend yang berfungsi (role dengan permission dapat akses, role tanpa permission ditolak) — bukan dari literalitas "Admin dapat CRUD seluruh master data".
+- Sejarah keputusan tidak diubah: baseline awal tetap tercatat menyebut "Admin only"; perubahan ini adalah penyelarasan dokumentasi terhadap RBAC final, bukan revisi retroaktif.
+
+### Known Open Items (tidak diselesaikan pada Phase 6, sesuai batas scope yang disepakati)
+- `periods_per_year` validasi `max:255` diterapkan sebagai **technical safety bound** (kapasitas kolom `unsignedTinyInteger`), **bukan** keputusan business rule final — status tetap TBD menunggu keputusan pemilik proyek jika diperlukan batas bisnis yang lebih spesifik.
+- Audit logging untuk CRUD master data (termasuk activate/deactivate `units`) **tidak diimplementasikan** — dievaluasi tidak diwajibkan oleh cakupan `audit_logs` pada `CLAUDE.md` §11 (struktur kinerja/indikator/target/status realisasi/hak akses pengguna), namun secara teknis struktur `audit_logs` mampu menampungnya bila di masa depan diperlukan melalui Change Request terpisah.
+- Proteksi khusus deactivate root unit (`parent_unit_id IS NULL`) **tidak diimplementasikan** — tidak ada dasar baseline untuk aturan ini; keputusan eksplisit pemilik proyek untuk tidak menambahkannya pada Phase 6.
+
 ## [2026-09-04] — Phase 5: SELESAI — Authentication & RBAC
 
 Penutup Phase 5 — Authentication & RBAC. Menyiapkan fondasi autentikasi (Laravel Sanctum) dan otorisasi (Spatie Laravel-Permission) untuk 9 role sesuai CR-001, dengan constraint bisnis kritis (Approve Sekretaris non-final) terverifikasi otomatis via Feature Test — sebagai fondasi middleware proteksi route untuk seluruh endpoint bisnis Phase 6 dan seterusnya.

@@ -64,11 +64,13 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Acceptance Criteria**: Semua 9 role dapat login dan hanya mengakses modul sesuai matrix RBAC (`docs/architecture/README.md` §2.4).
 - **Status**: 🟢 **Completed** — Sanctum + Spatie Laravel-Permission terinstal dan dimigrasi. 9 role, 36 permission (32 assignable + 4 TBD CR-001 sengaja unassigned) ter-seed sesuai RBAC Matrix penuh. Middleware alias (`role`/`permission`/`role_or_permission`) terdaftar, dibuktikan bekerja end-to-end via endpoint internal `/api/v1/test-permission`. 10 Feature Test lulus (24 assertions), termasuk 2 test constraint kritis: Sekretaris tidak memiliki `realization.finalize.kadis` (hanya `kepala_dinas`). Audit `$fillable` `unit_id` pada model `User` dilakukan — diputuskan **tidak** ditambahkan (parameter otorisasi, bukan field netral; menunggu Service User Management terkait CR-001 TBD-4). Endpoint bisnis (target/realisasi/dll.) sengaja belum dibuat — tetap scope Phase 6+. Selesai pada 2026-09-04.
 
-## Phase 6 — Master Data — ⚪
+## Phase 6 — Master Data — 🟢 COMPLETED
 - **Tujuan**: CRUD satuan, formula, periode pelaporan, unit/bidang.
 - **Prerequisite**: Phase 5 selesai.
-- **Output**: Modul master data berfungsi penuh (Admin only).
-- **Acceptance Criteria**: Admin dapat CRUD seluruh master data; validasi mencegah duplikasi/hapus data terpakai.
+- **Output**: Modul master data berfungsi penuh, diproteksi sesuai klasifikasi RBAC (master data kritis vs operasional).
+- **Acceptance Criteria**: CRUD tersedia untuk seluruh 4 entitas scope Phase 6; validasi mencegah duplikasi/hapus data terpakai; permission middleware diterapkan sesuai RBAC Matrix final; role dengan permission dapat mengakses, role tanpa permission ditolak.
+- **Catatan sinkronisasi wording (2026-09-10)**: Wording awal fase ini ("Admin only", "Admin dapat CRUD seluruh master data") ditulis sebelum RBAC Matrix final (CR-001) memperkenalkan klasifikasi master data kritis vs operasional secara terpisah. Wording di atas telah diselaraskan dengan baseline RBAC final sebagai sumber kebenaran authorization — lihat `CLAUDE.md` §15 dan `CHANGELOG.md` [2026-09-10] untuk detail keputusan (Decision Record: sinkronisasi ROADMAP vs RBAC Matrix Phase 5).
+- **Status**: 🟢 **Completed** — CRUD penuh untuk `units_of_measure`, `formulas`, `reporting_periods`, dan model baru `Unit` (`units`) terimplementasi dengan pola Controller→FormRequest→Service→Model. `formulas` diproteksi `master-data-kritis.manage`/`.view` (assignment Phase 5, tidak diubah); `units_of_measure`/`reporting_periods`/`units` diproteksi `master-data-operasional.manage` (TBD-1 CR-001 tetap terbuka, permission ini sengaja belum di-assign ke role manapun). Delete guard eksplisit di Service (cek referensi `indicator_versions`, HTTP 409 terstruktur) untuk 3 entitas; `units` memakai deactivate/activate (tidak ada physical delete) dengan guard user aktif & child aktif. 30 Feature Test baru lulus, ditambah regresi penuh 40 test/78 assertion tanpa kegagalan. Selesai pada 2026-09-10.
 
 ## Phase 7 — Performance Structure — ⚪
 - **Tujuan**: CRUD struktur berjenjang Tujuan–Sasaran–Program–Kegiatan–Sub Kegiatan dengan versioning.
