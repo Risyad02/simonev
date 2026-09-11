@@ -79,10 +79,11 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Phase 7A (Structure Core) — 🟢 Selesai 2026-09-11**: CRUD (create/read/update, tanpa delete fisik), validasi hierarki anti-circular, RBAC sesuai matrix existing.
 - **Phase 7B (Revision Workflow) — ⚪ Belum dimulai**: proposal revisi, approval, version lineage — menunggu resolusi Design Gap (kolom status lifecycle, linkage antar-versi) dan TBD-3/CR-001 (`structure.approve-revision`).
 
-## Phase 8 — Indicator Management — ⚪
+## Phase 8 — Indicator Management — 🟢 COMPLETED
 - **Tujuan**: CRUD indikator per level struktur + indicator_versions (satuan/formula/periode).
 - **Prerequisite**: Phase 7 selesai.
 - **Acceptance Criteria**: Revisi konfigurasi indikator membentuk versi baru, versi lama tetap tersimpan.
+- **Status**: 🟢 **Completed** — 2026-09-11. Kategori indikator (`indicator_categories`) ditunda ke fase mendatang (di luar Acceptance Criteria di atas).
 
 ## Phase 9 — Target Management — ⚪
 - **Tujuan**: Penetapan & revisi target per indicator_version per periode, **eksekusi eksklusif oleh Admin** berdasarkan dokumen perencanaan resmi (Renstra/RKPD Perubahan/Renstra Perubahan/Perjanjian Kinerja Perubahan), setelah pembahasan bersama Admin + bidang terkait (CR-001, AD-2).

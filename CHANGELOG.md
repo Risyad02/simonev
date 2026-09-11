@@ -2,6 +2,24 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-11] — Phase 8 Completed: Indicator Management
+
+### Added
+- Model `Indicator` (identitas, `structure_id` + `name`, tidak di-versioning) dan `IndicatorVersion` (konfigurasi lengkap: satuan/formula/periode/direction/definisi operasional/metode pengukuran/sumber data, immutable).
+- Permission baru: `indicator.manage`, `indicator.view`, di-assign mengikuti pola `structure.manage`/`structure.view` persis (`admin`→manage; `super_admin`/`operator`/`sekretaris`/`pimpinan`→view).
+- Endpoint CRUD `indicators` (delete fisik diizinkan hanya jika belum punya versi) dan endpoint `indicator_versions` (create/list/show/active — tanpa update/delete, immutable).
+- Mekanisme versioning konkret: create versi baru otomatis menonaktifkan versi aktif lama (`is_active=false`, `valid_to` terisi timestamp saat itu juga), sesuai prinsip versioning-over-overwrite CLAUDE.md §3.1/§10.
+- 15 Feature Test baru (`IndicatorTest.php`), regresi penuh 70 test/132 assertions lulus, 0 gagal.
+
+### Decided (disetujui eksplisit pemilik proyek selama sesi desain)
+- `indicators`: DELETE fisik diizinkan hanya jika belum punya `indicator_versions` (Service-layer guard + FK restrict, pola identik Phase 6).
+- `indicator_versions`: tidak pernah DELETE fisik maupun UPDATE isi versi — satu-satunya operasi tulis adalah CREATE versi baru.
+- Kategori indikator (`indicator_categories`/`indicator_category_assignments`) **ditunda sepenuhnya**, di luar scope Phase 8 — konsisten pola `MeasurementDirection`/`IndicatorCategory` di Phase 6 (model ada, CRUD ditunda).
+
+### Not Changed
+- Tidak ada migration baru — seluruh skema `indicators`/`indicator_versions` sudah tersedia sejak Phase 3, hanya belum ada model/Controller/Service/Test.
+- Tidak ada perubahan pola arsitektur (Service Layer tanpa Repository, `ApiResponseTrait`, FormRequest `authorize()=true`) — murni replikasi pola Phase 6/7A yang sudah terbukti.
+
 ## [2026-09-11] — Phase 7A Completed: Performance Structure (Structure Core)
 
 ### Added

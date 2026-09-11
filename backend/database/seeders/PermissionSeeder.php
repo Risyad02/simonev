@@ -29,6 +29,10 @@ class PermissionSeeder extends Seeder
             'structure.view.own-subunit',
             'structure.propose-revision',
 
+            // Kelola Indikator (Phase 8)
+            'indicator.manage',
+            'indicator.view',
+            
             // Kelola Target
             'target.manage',
             'target.view',

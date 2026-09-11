@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\V1\MasterData\FormulaController;
 use App\Http\Controllers\Api\V1\MasterData\ReportingPeriodController;
 use App\Http\Controllers\Api\V1\MasterData\UnitController;
 use App\Http\Controllers\Api\V1\Structure\PerformanceStructureController;
+use App\Http\Controllers\Api\V1\Indicator\IndicatorController;
+use App\Http\Controllers\Api\V1\Indicator\IndicatorVersionController;
 
 // Route API akan didaftarkan di sini bertahap sesuai fase roadmap.
 // Prefix /api/v1 diterapkan di bootstrap/app.php, bukan di sini.
@@ -88,5 +90,27 @@ Route::prefix('performance-structure')->middleware('auth:sanctum')->group(functi
         Route::post('/', [PerformanceStructureController::class, 'store']);
         Route::put('/{performanceStructure}', [PerformanceStructureController::class, 'update']);
         Route::patch('/{performanceStructure}', [PerformanceStructureController::class, 'update']);
+    });
+});
+
+// ==========================================================================
+// Phase 8 — Indicator Management
+// ==========================================================================
+Route::prefix('indicators')->middleware('auth:sanctum')->group(function () {
+    Route::middleware('permission:indicator.view')->group(function () {
+        Route::get('/', [IndicatorController::class, 'index']);
+        Route::get('/{indicator}', [IndicatorController::class, 'show']);
+        Route::get('/{indicator}/versions', [IndicatorVersionController::class, 'index']);
+        Route::get('/{indicator}/versions/active', [IndicatorVersionController::class, 'active']);
+        Route::get('/{indicator}/versions/{indicatorVersion}', [IndicatorVersionController::class, 'show']);
+    });
+
+    Route::middleware('permission:indicator.manage')->group(function () {
+        Route::post('/', [IndicatorController::class, 'store']);
+        Route::put('/{indicator}', [IndicatorController::class, 'update']);
+        Route::patch('/{indicator}', [IndicatorController::class, 'update']);
+        Route::delete('/{indicator}', [IndicatorController::class, 'destroy']);
+
+        Route::post('/{indicator}/versions', [IndicatorVersionController::class, 'store']);
     });
 });
