@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\MasterData\UnitOfMeasureController;
 use App\Http\Controllers\Api\V1\MasterData\FormulaController;
 use App\Http\Controllers\Api\V1\MasterData\ReportingPeriodController;
 use App\Http\Controllers\Api\V1\MasterData\UnitController;
+use App\Http\Controllers\Api\V1\Structure\PerformanceStructureController;
 
 // Route API akan didaftarkan di sini bertahap sesuai fase roadmap.
 // Prefix /api/v1 diterapkan di bootstrap/app.php, bukan di sini.
@@ -72,5 +73,20 @@ Route::prefix('master-data')->middleware('auth:sanctum')->group(function () {
         Route::patch('units/{unit}', [UnitController::class, 'update']);
         Route::patch('units/{unit}/deactivate', [UnitController::class, 'deactivate']);
         Route::patch('units/{unit}/activate', [UnitController::class, 'activate']);
+    });
+});
+
+// ==========================================================================
+// Phase 7A — Performance Structure (Structure Core, tanpa revision workflow)
+// ==========================================================================
+Route::prefix('performance-structure')->middleware('auth:sanctum')->group(function () {
+    Route::middleware('permission:structure.view')->group(function () {
+        Route::get('/', [PerformanceStructureController::class, 'index']);
+        Route::get('/{performanceStructure}', [PerformanceStructureController::class, 'show']);
+    });
+    Route::middleware('permission:structure.manage')->group(function () {
+        Route::post('/', [PerformanceStructureController::class, 'store']);
+        Route::put('/{performanceStructure}', [PerformanceStructureController::class, 'update']);
+        Route::patch('/{performanceStructure}', [PerformanceStructureController::class, 'update']);
     });
 });

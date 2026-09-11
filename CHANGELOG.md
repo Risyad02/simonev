@@ -2,6 +2,35 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-11] — Phase 7A Completed: Performance Structure (Structure Core)
+
+### Added
+- Model `PerformanceStructure` dan `PlanningDocument` (minimal, tanpa CRUD dokumen perencanaan).
+- Service layer `PerformanceStructureService` dengan validasi anti-circular hierarchy (pola sama `UnitService::isCircular()` Phase 6, disesuaikan kolom `parent_id`).
+- Controller + FormRequest (Store/Update) domain `performance-structure`, mengikuti pola Controller → FormRequest → Service → Model.
+- Endpoint `GET/POST/PUT/PATCH /api/v1/performance-structure` — **tanpa DELETE fisik**, konsisten prinsip versioning-over-overwrite.
+- Factory `PerformanceStructureFactory` dan `PlanningDocumentFactory` untuk kebutuhan testing.
+- 15 Feature Test baru: RBAC per role, CRUD, validasi hierarki (root/child, self-parent, circular 3-level, valid reparenting), active state, `created_by` auto-fill dari actor, relasi `planning_document_id`, konfirmasi tidak ada delete fisik (405).
+
+### Scope Decision (Phase 7A vs 7B)
+- Phase 7 dipecah menjadi **Phase 7A — Structure Core** (selesai) dan **Phase 7B — Revision Workflow** (belum dimulai), karena hasil ANALYZE menemukan schema `performance_structure` belum memiliki kolom status lifecycle (draft/proposed/active/superseded) maupun linkage eksplisit antar-versi revisi.
+- `structure.propose-revision` tetap ter-assign ke Kepala Bidang di RBAC, namun endpoint/fungsionalitasnya **tidak** diimplementasikan di Phase 7A — ditunda ke Phase 7B menunggu desain revision architecture disetujui.
+- `structure.approve-revision` tetap berstatus TBD-3/CR-001 — tidak di-assign ke role manapun.
+
+### Design Gaps (dicatat, belum diselesaikan)
+1. Tidak ada kolom status lifecycle revisi di `performance_structure`.
+2. Tidak ada `unit_id`/relasi scoping untuk `structure.view.own-subunit` (Kepala Sub Bidang) — endpoint `performance-structure` sengaja **tidak** diberi akses ke role ini di Phase 7A untuk menghindari scoping palsu.
+3. Tidak ada linkage eksplisit predecessor/successor antar-versi struktur.
+4. Tidak ada validasi business rule urutan jenjang `level_type` (mis. mencegah Sub Kegiatan menjadi parent Tujuan) — belum ada keputusan eksplisit owner soal aturan ini.
+
+### Not Changed (dikonfirmasi tetap final)
+- Migration Phase 3 (`performance_structure`, `planning_documents`) — tidak diubah.
+- `PermissionSeeder.php` / `RolePermissionSeeder.php` — tidak diubah, tidak ada assignment baru.
+- Tidak ada perubahan frontend.
+
+### Testing
+- 15 Feature Test baru, regresi penuh 55 test / 103 assertions lulus, 0 gagal.
+
 ## [2026-09-10] — Phase 6: Master Data — Implementation
 
 ### Added

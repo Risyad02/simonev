@@ -72,10 +72,12 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Catatan sinkronisasi wording (2026-09-10)**: Wording awal fase ini ("Admin only", "Admin dapat CRUD seluruh master data") ditulis sebelum RBAC Matrix final (CR-001) memperkenalkan klasifikasi master data kritis vs operasional secara terpisah. Wording di atas telah diselaraskan dengan baseline RBAC final sebagai sumber kebenaran authorization — lihat `CLAUDE.md` §15 dan `CHANGELOG.md` [2026-09-10] untuk detail keputusan (Decision Record: sinkronisasi ROADMAP vs RBAC Matrix Phase 5).
 - **Status**: 🟢 **Completed** — CRUD penuh untuk `units_of_measure`, `formulas`, `reporting_periods`, dan model baru `Unit` (`units`) terimplementasi dengan pola Controller→FormRequest→Service→Model. `formulas` diproteksi `master-data-kritis.manage`/`.view` (assignment Phase 5, tidak diubah); `units_of_measure`/`reporting_periods`/`units` diproteksi `master-data-operasional.manage` (TBD-1 CR-001 tetap terbuka, permission ini sengaja belum di-assign ke role manapun). Delete guard eksplisit di Service (cek referensi `indicator_versions`, HTTP 409 terstruktur) untuk 3 entitas; `units` memakai deactivate/activate (tidak ada physical delete) dengan guard user aktif & child aktif. 30 Feature Test baru lulus, ditambah regresi penuh 40 test/78 assertion tanpa kegagalan. Selesai pada 2026-09-10.
 
-## Phase 7 — Performance Structure — ⚪
+## Phase 7 — Performance Structure — 🟡 SEBAGIAN SELESAI (Phase 7A)
 - **Tujuan**: CRUD struktur berjenjang Tujuan–Sasaran–Program–Kegiatan–Sub Kegiatan dengan versioning.
 - **Prerequisite**: Phase 6 selesai.
 - **Acceptance Criteria**: Struktur dapat diubah tanpa merusak histori; hierarki tervalidasi (tidak circular).
+- **Phase 7A (Structure Core) — 🟢 Selesai 2026-09-11**: CRUD (create/read/update, tanpa delete fisik), validasi hierarki anti-circular, RBAC sesuai matrix existing.
+- **Phase 7B (Revision Workflow) — ⚪ Belum dimulai**: proposal revisi, approval, version lineage — menunggu resolusi Design Gap (kolom status lifecycle, linkage antar-versi) dan TBD-3/CR-001 (`structure.approve-revision`).
 
 ## Phase 8 — Indicator Management — ⚪
 - **Tujuan**: CRUD indikator per level struktur + indicator_versions (satuan/formula/periode).
