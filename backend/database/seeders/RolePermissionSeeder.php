@@ -31,6 +31,7 @@ class RolePermissionSeeder extends Seeder
                 'realization.recap.view',
                 'dashboard.view.full',
                 'audit-log.view.full',
+                'indicator.view',
             ],
 
             'admin' => [
@@ -42,12 +43,14 @@ class RolePermissionSeeder extends Seeder
                 'publication.manage',
                 'dashboard.view.operational',
                 'audit-log.view',
+                'indicator.manage', 
             ],
 
             'operator' => [
                 'structure.view',
                 'realization.manage',
                 'dashboard.view.own-scope',
+                'indicator.view',
             ],
 
             'kepala_sub_bidang' => [
@@ -75,6 +78,7 @@ class RolePermissionSeeder extends Seeder
                 'realization.recommend.sekretaris',
                 'realization.return.sekretaris',
                 'dashboard.view.cross-unit',
+                'indicator.view',
             ],
 
             'kepala_dinas' => [
@@ -92,6 +96,7 @@ class RolePermissionSeeder extends Seeder
                 'realization.view',
                 'realization.recap.view',
                 'dashboard.view.strategic-summary',
+                'indicator.view',
             ],
 
             'publik' => [
