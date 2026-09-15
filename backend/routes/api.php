@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\V1\MasterData\UnitController;
 use App\Http\Controllers\Api\V1\Structure\PerformanceStructureController;
 use App\Http\Controllers\Api\V1\Indicator\IndicatorController;
 use App\Http\Controllers\Api\V1\Indicator\IndicatorVersionController;
-
+use App\Http\Controllers\Api\V1\Target\TargetController;
 // Route API akan didaftarkan di sini bertahap sesuai fase roadmap.
 // Prefix /api/v1 diterapkan di bootstrap/app.php, bukan di sini.
 
@@ -112,5 +112,23 @@ Route::prefix('indicators')->middleware('auth:sanctum')->group(function () {
         Route::delete('/{indicator}', [IndicatorController::class, 'destroy']);
 
         Route::post('/{indicator}/versions', [IndicatorVersionController::class, 'store']);
+    });
+});
+
+
+// ==========================================================================
+// Phase 9 — Target Management
+// ==========================================================================
+Route::prefix('targets')->middleware('auth:sanctum')->group(function () {
+    Route::middleware('permission:target.view')->group(function () {
+        Route::get('/', [TargetController::class, 'index']);
+        Route::get('/{target}', [TargetController::class, 'show']);
+        Route::get('/{target}/revisions', [TargetController::class, 'revisions']);
+    });
+
+    Route::middleware('permission:target.manage')->group(function () {
+        Route::post('/', [TargetController::class, 'store']);
+        Route::post('/{target}/revisions', [TargetController::class, 'storeRevision']);
+        Route::delete('/{target}', [TargetController::class, 'destroy']);
     });
 });
