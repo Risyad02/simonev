@@ -2,6 +2,36 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-15] — Architecture Decision: CR-004 — Target Versioning Columns
+
+### Changed
+- Tabel `targets` mendapat kolom baru `valid_from` (timestamp, nullable) dan `valid_to`
+  (timestamp, nullable), ditambahkan tepat setelah `is_active` — menyelaraskan mekanisme
+  versioning `targets` dengan pola yang sudah dipakai `indicator_versions` sejak Phase 3/8.
+- Migration: `2026_09_15_031501_add_valid_from_and_valid_to_to_targets_table.php`.
+
+### Verified
+- 0 baris data existing pada `targets` saat migration dijalankan (`DB::table('targets')->count()` = 0)
+  — tidak ada backfill atau rekonstruksi timestamp historis yang diperlukan.
+- Siklus penuh diverifikasi: `migrate` (sukses) → schema check (13 kolom, `valid_from`/`valid_to`
+  nullable timestamp, seluruh kolom/FK/index existing tidak berubah) → `migrate:rollback --step=1`
+  (sukses) → schema check (kembali ke 11 kolom awal) → `migrate` ulang (sukses) → schema check final
+  (13 kolom, row count tetap 0).
+
+### Not Changed
+- Tidak ada perubahan endpoint, permission, RBAC, FK constraint, atau kolom/index existing pada
+  `targets`. Tidak ada implementasi domain Target (Model/Service/Controller/FormRequest/Factory/Test)
+  pada CR ini — murni perubahan schema, terpisah dari siklus implementasi Phase 9.
+
+### Process
+- Diproses melalui Change Management Process (`CLAUDE.md` §17) penuh: Impact Analysis → Formal CR
+  (CR-004) → Explicit Owner Approval → Architecture Decision update (`CLAUDE.md` §15) → migration
+  implementation. Lihat `CLAUDE.md` §15 entri 2026-09-15 untuk detail keputusan.
+
+### Impacted Files
+`backend/database/migrations/2026_09_15_031501_add_valid_from_and_valid_to_to_targets_table.php`
+(baru), `CLAUDE.md` (§5, §14, §15 — modified), `CHANGELOG.md` (modified); branch `develop`.
+
 ## [2026-09-11] — Phase 8 Completed: Indicator Management
 
 ### Added
