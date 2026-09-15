@@ -2,6 +2,72 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-15] — Phase 9 Completed: Target Management
+
+### Added
+- Model `Target` (identitas + konfigurasi tergabung dalam satu baris — berbeda dari pola `Indicator`/`IndicatorVersion` yang terpisah, karena setiap revisi target menghasilkan baris baru yang lengkap, bukan konfigurasi terpisah dari identitas). Memakai `valid_from`/`valid_to`/`is_active` untuk versioning, sesuai CR-004.
+- `TargetService` (`app/Services/Target/`): `createInitial()`, `createRevision()`, `delete()` — seluruh operasi tulis dibungkus `DB::transaction()`. Return format tuple `[bool, payload, statusCode|null]`, konsisten pola "Service methods return tuple arrays for operations with failure states".
+- `TargetController` (`app/Http/Controllers/Api/V1/Target/`), `StoreTargetRequest`, `StoreTargetRevisionRequest` (`app/Http/Requests/Target/`) — pola Controller → FormRequest → Service → Model, tanpa Repository.
+- Endpoint (`prefix: targets`, seluruhnya `auth:sanctum`):
+  - `GET /targets`, `GET /targets/{target}`, `GET /targets/{target}/revisions` — permission `target.view`.
+  - `POST /targets` (target awal), `POST /targets/{target}/revisions` (revisi), `DELETE /targets/{target}` — permission `target.manage`.
+  - Tidak ada `PUT`/`PATCH` — `Target` immutable secara substantif, revisi selalu lewat endpoint `/revisions` terpisah (bukan update in-place).
+- `TargetFactory` (`database/factories/`) — pola hybrid: tidak menyediakan default `indicator_version_id`/`planning_document_id` (kedua field wajib di-override eksplisit oleh pemanggil), karena `IndicatorVersionFactory` sengaja tidak dibuat (lihat Design Decision di bawah).
+- 21 Feature Test baru (`tests/Feature/Api/V1/Target/TargetTest.php`), regresi penuh **91 test / 172 assertions lulus, 0 gagal** — tanpa dampak ke test Phase 1–8.
+
+### Decided (disetujui eksplisit pemilik proyek melalui siklus INSPECT→ANALYZE→DECISION→DESIGN)
+- **Revision lifecycle**: baris lama → `is_active=false` + `valid_to=now()` (field lain, termasuk `target_value`/`period_label`/`indicator_version_id`, tidak pernah diubah); baris baru → `revision_no+1`, `is_active=true`, `valid_from=now()`, `valid_to=NULL`, `reason` wajib. Tidak ada `UPDATE` yang menghapus/menimpa nilai historis — murni INSERT + deaktivasi, sesuai §3.1/§10 CLAUDE.md.
+- **Endpoint terpisah untuk revisi** (`POST /targets` vs `POST /targets/{id}/revisions`) alih-alih satu endpoint ambigu yang menentukan initial-vs-revision dari keberadaan target aktif — intent API eksplisit, lebih mudah diuji, `reason` bisa divalidasi wajib hanya di jalur revisi.
+- **`reason`**: nullable di level DB (penetapan target awal secara konseptual tidak butuh "alasan revisi"), wajib di level business-rule saat revisi (`revision_no > 1`) — divalidasi FormRequest (primer) **dan** Service (safety net), defense-in-depth konsisten pola delete-guard Phase 6/8.
+- **Guard "satu target aktif"** per `(indicator_version_id, period_label)`: Service-layer guard dalam DB transaction, **tanpa** DB unique constraint. Composite unique index polos ditolak (histori revisi `is_active=false` harus bisa punya kombinasi sama berulang kali). Partial/filtered unique index ditolak (MariaDB tidak mendukung native seperti PostgreSQL; workaround generated-column akan membuat test SQLite dan production MariaDB memvalidasi mekanisme berbeda — risiko false confidence). Race condition pada guard ini diterima sebagai known limitation, identik dengan risiko yang sudah diterima proyek untuk `IndicatorVersion` Phase 8.
+- **`planning_document_id` saat revisi**: boleh diganti secara eksplisit (opsional di request) — target revision dapat terjadi karena perubahan dokumen perencanaan acuan (mis. Renstra → RKPD Perubahan). Jika tidak dikirim, inherited dari target lama. Old target tidak pernah berubah.
+- **Delete guard**: physical DELETE hanya jika target belum punya `realizations`, dicek via `DB::table('realizations')->where('target_id', ...)->exists()` (Query Builder langsung) — **bukan** relasi Eloquent `hasMany`, karena Model `Realization` sengaja tidak dibuat (scope Phase 10 murni). `restrictOnDelete()` FK tetap sebagai lapisan pertahanan terakhir.
+- **`IndicatorVersionFactory` sengaja tidak dibuat** — INSPECT terhadap `IndicatorTest.php` (Phase 8) membuktikan `IndicatorVersion` tidak pernah dibuat via factory di test manapun, melainkan `Model::create()` inline lewat helper method privat (mengikuti pola identik `UnitOfMeasure`/`Formula`/`ReportingPeriod` sejak Phase 6). `TargetTest.php` mereplikasi pola yang sama persis (`createIndicatorVersion()` helper), bukan memperkenalkan pola baru.
+- **`target.discuss` tidak dikonsumsi endpoint manapun** — AD-2 (CR-001) menetapkan "pembahasan bersama Admin + bidang terkait" sebagai proses organisasi/offline, bukan workflow approval sistem. Permission dipertahankan di RBAC sesuai baseline Phase 5, tidak dihapus/diubah, tidak dikarang endpoint baru untuk "memakainya".
+
+### Not Changed
+- Tidak ada migration baru di luar CR-004 (lihat entri terpisah di atas) — schema `targets` yang dipakai Phase 9 sudah final sejak CR-004 disetujui.
+- Tidak ada perubahan RBAC/`RolePermissionSeeder.php` — permission `target.manage`/`target.view`/`target.discuss`/`target.approve-revision` dan assignment-nya identik dengan baseline Phase 5, hanya diverifikasi ulang (tidak diasumsikan tetap sama).
+- Tidak ada perubahan pola arsitektur (Service Layer tanpa Repository, `ApiResponseTrait`, FormRequest `authorize()=true`) — replikasi pola Phase 6/7A/8 yang sudah terbukti.
+
+### Known Open Items (di luar scope Phase 9, dicatat eksplisit — bukan diselesaikan diam-diam)
+- **Audit logging untuk domain Target** — CLAUDE.md §11 eksplisit mewajibkan audit untuk target, namun INSPECT membuktikan **tidak ada infrastruktur audit sama sekali** (tidak ada `AuditLog` Model/Service/Trait/Observer) di codebase, meski tabel `audit_logs` sudah ada sejak Phase 3. Fakta ini juga berlaku untuk domain lain yang disebut §11 (struktur, indikator, status realisasi, hak akses pengguna) — belum satu pun teraudit sejak Phase 5–8. Membangun infrastruktur audit khusus Target pada Phase 9 akan menciptakan precedent parsial (satu domain teraudit, yang lain tidak) tanpa kontrak/mekanisme konsisten lintas-domain. Dieskalasi sebagai **Cross-Domain Design Gap**, direkomendasikan menjadi Change Request/Design Item tersendiri yang mencakup seluruh domain §11 sekaligus, bukan diselesaikan sepotong-sepotong per fase.
+- **`target.approve-revision` tetap TBD-3/CR-001** — tidak di-assign ke role manapun pada Phase 9, konsisten TBD yang sudah ada sejak Phase 5.
+- **Konfirmasi UI-level normalization `period_label`** (mis. "Januari" vs " januari ") tidak diimplementasikan — `period_label` tetap string bebas sesuai schema aktual (tidak diubah jadi FK/enum tanpa CR terpisah), guard uniqueness Service membandingkan string secara literal.
+
+### Impacted Files
+`backend/app/Models/Target.php`, `backend/app/Http/Requests/Target/StoreTargetRequest.php`, `backend/app/Http/Requests/Target/StoreTargetRevisionRequest.php`, `backend/app/Services/Target/TargetService.php`, `backend/app/Http/Controllers/Api/V1/Target/TargetController.php`, `backend/database/factories/TargetFactory.php`, `backend/tests/Feature/Api/V1/Target/TargetTest.php` (seluruhnya baru); `backend/routes/api.php` (modified); `CLAUDE.md` (§14, §15 — modified), `CHANGELOG.md` (modified); branch `develop`.
+
+## [2026-09-15] — Architecture Decision: CR-004 — Target Versioning Columns
+
+### Changed
+- Tabel `targets` mendapat kolom baru `valid_from` (timestamp, nullable) dan `valid_to`
+  (timestamp, nullable), ditambahkan tepat setelah `is_active` — menyelaraskan mekanisme
+  versioning `targets` dengan pola yang sudah dipakai `indicator_versions` sejak Phase 3/8.
+- Migration: `2026_09_15_031501_add_valid_from_and_valid_to_to_targets_table.php`.
+
+### Verified
+- 0 baris data existing pada `targets` saat migration dijalankan (`DB::table('targets')->count()` = 0)
+  — tidak ada backfill atau rekonstruksi timestamp historis yang diperlukan.
+- Siklus penuh diverifikasi: `migrate` (sukses) → schema check (13 kolom, `valid_from`/`valid_to`
+  nullable timestamp, seluruh kolom/FK/index existing tidak berubah) → `migrate:rollback --step=1`
+  (sukses) → schema check (kembali ke 11 kolom awal) → `migrate` ulang (sukses) → schema check final
+  (13 kolom, row count tetap 0).
+
+### Not Changed
+- Tidak ada perubahan endpoint, permission, RBAC, FK constraint, atau kolom/index existing pada
+  `targets`. Tidak ada implementasi domain Target (Model/Service/Controller/FormRequest/Factory/Test)
+  pada CR ini — murni perubahan schema, terpisah dari siklus implementasi Phase 9.
+
+### Process
+- Diproses melalui Change Management Process (`CLAUDE.md` §17) penuh: Impact Analysis → Formal CR
+  (CR-004) → Explicit Owner Approval → Architecture Decision update (`CLAUDE.md` §15) → migration
+  implementation. Lihat `CLAUDE.md` §15 entri 2026-09-15 untuk detail keputusan.
+
+### Impacted Files
+`backend/database/migrations/2026_09_15_031501_add_valid_from_and_valid_to_to_targets_table.php`
+(baru), `CLAUDE.md` (§5, §14, §15 — modified), `CHANGELOG.md` (modified); branch `develop`.
+
 ## [2026-09-11] — Phase 8 Completed: Indicator Management
 
 ### Added
