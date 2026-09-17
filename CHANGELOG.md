@@ -2,6 +2,18 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-16] — Phase 10 Prerequisite: Audit Infrastructure & Scope Clarification
+
+### Added
+- `AuditLog` Model (`app/Models/AuditLog.php`) dan `AuditService` (`app/Services/Audit/AuditService.php`) — infrastruktur audit generik minimal, append-only, forward-only. Menyelesaikan Cross-Domain Design Gap yang dieskalasi di Phase 9 (CHANGELOG [2026-09-15]).
+- 5 Feature Test baru (`tests/Feature/Services/Audit/AuditServiceTest.php`) — field storage, JSON cast, nullable actor, append-only invariant, transaction rollback. Regresi penuh 96 test/183 assertion lulus.
+
+### Clarified
+- `ROADMAP.md` Phase 10 diperbarui untuk mencantumkan eksplisit kebutuhan unggah bukti dukung realisasi (opsional, file/link) — dikonfirmasi bagian dari baseline (Tahap 1/2/3/4/6), bukan fitur baru. Manajemen versi file/pratinjau (Tahap 7 "Versi 2") dikonfirmasi di luar scope Phase 10.
+
+### Decided
+- Audit infrastructure dibangun sebagai prerequisite Phase 10 (Opsi A dari 3 opsi yang dianalisis), bukan ditunda ke Phase 11 atau displit jadi sub-fase — lihat `CLAUDE.md` §15 untuk detail keputusan.
+
 ## [2026-09-15] — Phase 9 Completed: Target Management
 
 ### Added
