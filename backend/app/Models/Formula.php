@@ -6,5 +6,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class Formula extends Model
 {
-    protected $fillable = ['name', 'formula_type', 'expression', 'description'];
+    protected $fillable = ['name', 'formula_type', 'type', 'expression', 'description'];
 }
