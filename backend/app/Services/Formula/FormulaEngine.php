@@ -50,6 +50,12 @@ class FormulaEngine
 
     private function evaluateCustomFormula(Formula $formula, float $targetValue, float $realizationValue): FormulaResult
     {
+        if ($formula->expression === null || $formula->expression === '') {
+            throw new UnsupportedFormulaTypeException(
+                "Formula custom (id={$formula->id}) tidak memiliki expression yang valid untuk dievaluasi."
+            );
+        }
+
         $achievementPct = $this->safeExpressionEngine->evaluate(
             $formula->expression,
             $targetValue,
