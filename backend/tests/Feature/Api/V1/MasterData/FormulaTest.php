@@ -146,4 +146,96 @@ class FormulaTest extends TestCase
             'updated_at' => now(),
         ]);
     }
+
+        public function test_update_expression_ditolak_jika_formula_sudah_digunakan(): void
+    {
+        $this->actingAsSuperAdmin();
+
+        $satuan = UnitOfMeasure::create(['name' => 'Satuan Protected 1']);
+        $formula = Formula::create([
+            'name' => 'Formula Terpakai Expr',
+            'formula_type' => 'persentase_capaian',
+            'type' => 'custom',
+            'expression' => 'target - realisasi',
+        ]);
+        $periode = ReportingPeriod::create(['name' => 'Bulanan Protected 1', 'periods_per_year' => 12]);
+        $this->createIndicatorVersionUsing($satuan->id, $formula->id, $periode->id);
+
+        $this->putJson("/api/v1/master-data/formulas/{$formula->id}", [
+            'expression' => 'target + realisasi',
+        ])->assertStatus(409);
+
+        $this->assertDatabaseHas('formulas', [
+            'id' => $formula->id,
+            'expression' => 'target - realisasi',
+        ]);
+    }
+
+    public function test_update_formula_type_ditolak_jika_formula_sudah_digunakan(): void
+    {
+        $this->actingAsSuperAdmin();
+
+        $satuan = UnitOfMeasure::create(['name' => 'Satuan Protected 2']);
+        $formula = Formula::create(['name' => 'Formula Terpakai Type1', 'formula_type' => 'persentase_capaian']);
+        $periode = ReportingPeriod::create(['name' => 'Bulanan Protected 2', 'periods_per_year' => 12]);
+        $this->createIndicatorVersionUsing($satuan->id, $formula->id, $periode->id);
+
+        $this->putJson("/api/v1/master-data/formulas/{$formula->id}", [
+            'formula_type' => 'nilai_langsung',
+        ])->assertStatus(409);
+    }
+
+    public function test_update_type_ditolak_jika_formula_sudah_digunakan(): void
+    {
+        $this->actingAsSuperAdmin();
+
+        $satuan = UnitOfMeasure::create(['name' => 'Satuan Protected 3']);
+        $formula = Formula::create([
+            'name' => 'Formula Terpakai Type2',
+            'formula_type' => 'persentase_capaian',
+            'type' => 'custom',
+            'expression' => 'target - realisasi',
+        ]);
+        $periode = ReportingPeriod::create(['name' => 'Bulanan Protected 3', 'periods_per_year' => 12]);
+        $this->createIndicatorVersionUsing($satuan->id, $formula->id, $periode->id);
+
+        $this->putJson("/api/v1/master-data/formulas/{$formula->id}", [
+            'type' => 'system',
+        ])->assertStatus(409);
+    }
+
+    public function test_update_name_tetap_berhasil_meski_formula_sudah_digunakan(): void
+    {
+        $this->actingAsSuperAdmin();
+
+        $satuan = UnitOfMeasure::create(['name' => 'Satuan Protected 4']);
+        $formula = Formula::create(['name' => 'Formula Terpakai Nama Lama', 'formula_type' => 'persentase_capaian']);
+        $periode = ReportingPeriod::create(['name' => 'Bulanan Protected 4', 'periods_per_year' => 12]);
+        $this->createIndicatorVersionUsing($satuan->id, $formula->id, $periode->id);
+
+        $this->putJson("/api/v1/master-data/formulas/{$formula->id}", [
+            'name' => 'Formula Terpakai Nama Baru',
+        ])->assertStatus(200)->assertJsonPath('data.name', 'Formula Terpakai Nama Baru');
+    }
+
+    public function test_update_expression_berhasil_jika_formula_belum_digunakan(): void
+    {
+        $this->actingAsSuperAdmin();
+
+        $formula = Formula::create([
+            'name' => 'Formula Belum Terpakai',
+            'formula_type' => 'persentase_capaian',
+            'type' => 'custom',
+            'expression' => 'target - realisasi',
+        ]);
+
+        $this->putJson("/api/v1/master-data/formulas/{$formula->id}", [
+            'expression' => 'target + realisasi',
+        ])->assertStatus(200);
+
+        $this->assertDatabaseHas('formulas', [
+            'id' => $formula->id,
+            'expression' => 'target + realisasi',
+        ]);
+    }
 }
