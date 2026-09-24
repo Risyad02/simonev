@@ -49,6 +49,7 @@ class RolePermissionSeeder extends Seeder
             'operator' => [
                 'structure.view',
                 'realization.manage',
+                'realization.view.own',
                 'dashboard.view.own-scope',
                 'indicator.view',
             ],
