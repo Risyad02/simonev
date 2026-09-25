@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\Indicator\IndicatorController;
 use App\Http\Controllers\Api\V1\Indicator\IndicatorVersionController;
 use App\Http\Controllers\Api\V1\Target\TargetController;
 use App\Http\Controllers\Api\V1\Realization\RealizationController;
+use App\Http\Controllers\Api\V1\Realization\RealizationAttachmentController;
 // Route API akan didaftarkan di sini bertahap sesuai fase roadmap.
 // Prefix /api/v1 diterapkan di bootstrap/app.php, bukan di sini.
 
@@ -141,9 +142,11 @@ Route::prefix('realizations')->middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:realization.view|realization.view.own|realization.view.cross-unit|realization.recap.view')->group(function () {
         Route::get('/', [RealizationController::class, 'index']);
         Route::get('/{realization}', [RealizationController::class, 'show']);
+        Route::get('/{realization}/attachments/{attachment}/download', [RealizationAttachmentController::class, 'download']);
     });
 
     Route::middleware('permission:realization.manage|realization.manage.backup')->group(function () {
         Route::post('/', [RealizationController::class, 'store']);
+        Route::post('/{realization}/attachments', [RealizationAttachmentController::class, 'store']);
     });
 });
