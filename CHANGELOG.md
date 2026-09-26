@@ -2,6 +2,32 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-09-25] — Phase 10 Completed: Realization Management
+
+### Added
+- **Audit Infrastructure** (prerequisite): `AuditLog` model + `AuditService` — generik, append-only, forward-only.
+- **Hybrid Formula Engine**: `formulas.type` (system/custom); `FormulaResult`, `FormulaCalculatorInterface`; safe custom-expression tokenizer/parser/evaluator (`App\Services\Formula\Expression\*`, hand-written, no `eval()`); 3 built-in calculators (`PersentaseCapaianCalculator`, `TargetPerRealisasiCalculator`, `NilaiLangsungCalculator`); `FormulaEngine` resolver; expression syntax validation wired into Formula Store/Update (`ValidFormulaExpression` rule). 63 unit tests.
+- **Realization Core**: `Realization` model, `RealizationService` (target-active guard, FormulaEngine integration, transactional audit trail, permission-based backup-mode detection, ownership query-scope), `RealizationController` (index/show/store, explicit IDOR guard), routes. New permission `realization.view.own`. 15 feature tests.
+- **realization_attachments**: `RealizationAttachment` model, upload/download service+controller, UUID-named files on the `local` disk, MIME/size-validated, audit-logged. 11 feature tests.
+
+### Fixed
+- **Critical**: `FormulaSeeder.php` now sets `type='system'` explicitly for all 6 built-in formulas — a fresh `migrate:fresh --seed` previously produced `type='custom'` for all of them (migration data-fix ran before the seeder populated the table), which would break Realization creation for every built-in formula on any fresh environment. See `CLAUDE.md` §15 for full root-cause analysis.
+- `FormulaService::update()` now rejects (409) changes to `expression`/`formula_type`/`type` on a Formula already referenced by an `IndicatorVersion` — closes a historical-integrity gap present since Phase 6.
+
+### Decided
+- Design Gap resolution: Audit Infrastructure built as a self-contained prerequisite (Opsi A among 3 analyzed) rather than deferred to Phase 11 or split.
+- `akumulasi`/`rata_rata`/`bobot` formula types intentionally left unimplemented — insufficient domain definition (first two) or missing schema support (`bobot` needs a weight column that doesn't exist anywhere).
+- `realization.view.own` added as a Change Request against the Phase 5 RBAC matrix — Operators are genuine data owners for Realization (unlike Target, which only Admin creates), justifying a narrower least-privilege permission than Target's pattern.
+- Unit-scope filtering for `realization.view` (Kabid/Kasubbid) is a known, documented limitation (not silently implemented as "see everything" or silently broken) — blocked on TBD-4 CR-001 (no `unit_id` anywhere in `performance_structure`, `User.unit_id` still deliberately non-fillable since Phase 5).
+- `realization_attachments` built as a separate checkpoint after Realization Core, isolating file-upload complexity (MIME/storage/security) from the core CRUD+calculation work.
+
+### Verified
+- Full regression: **192 tests / 326 assertions passed**, zero failures.
+- Manual Postman verification against real MariaDB (same practice as Phase 9): login per role, realization create (success/backup/rejected), target-inactive rejection, ownership scope (index/show), IDOR guard, attachment upload/download — all scenarios matched expectations.
+
+### Impacted Files
+`backend/app/Models/{Realization,RealizationAttachment}.php`; `backend/app/Services/Audit/AuditService.php`; `backend/app/Services/Formula/**` (Calculators, Expression, Exceptions, Contracts, FormulaEngine.php, SafeExpressionEngine.php, FormulaResult.php); `backend/app/Services/Realization/{RealizationService,RealizationAttachmentService}.php`; `backend/app/Http/Controllers/Api/V1/Realization/{RealizationController,RealizationAttachmentController}.php`; `backend/app/Http/Requests/Realization/{StoreRealizationRequest,StoreRealizationAttachmentRequest}.php`; `backend/app/Rules/ValidFormulaExpression.php`; `backend/database/migrations/{2026_09_17_072408_add_type_to_formulas_table}.php`; `backend/database/seeders/{FormulaSeeder,PermissionSeeder,RolePermissionSeeder}.php` (modified); `backend/routes/api.php` (modified); ~180 new test files/methods across Unit and Feature suites; `CLAUDE.md`, `ROADMAP.md`, `CHANGELOG.md`, `docs/architecture/README.md` (modified); branch `feature/phase10-realization-management`.
+
 ## [2026-09-16] — Phase 10 Prerequisite: Audit Infrastructure & Scope Clarification
 
 ### Added
