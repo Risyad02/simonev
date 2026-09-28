@@ -33,9 +33,13 @@ class FormulaController extends BaseController
 
     public function update(UpdateFormulaRequest $request, Formula $formula)
     {
-        $formula = $this->service->update($formula, $request->validated());
+        [$ok, $result, $statusCode] = $this->service->update($formula, $request->validated());
 
-        return $this->success($formula, 'Formula berhasil diperbarui');
+        if (! $ok) {
+            return $this->error($result, null, $statusCode);
+        }
+
+        return $this->success($result, 'Formula berhasil diperbarui');
     }
 
     public function destroy(Formula $formula)

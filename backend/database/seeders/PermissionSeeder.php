@@ -42,6 +42,7 @@ class PermissionSeeder extends Seeder
             'realization.manage',
             'realization.manage.backup',
             'realization.view',
+            'realization.view.own',
             'realization.view.cross-unit',
 
             // Validasi

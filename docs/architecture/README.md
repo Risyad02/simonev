@@ -109,6 +109,10 @@ Draft (Operator)
 
 Permission Laravel (Spatie) yang perlu ditambahkan pada Phase 5: `realization.validate.kasubbid`, `structure.view.own-subunit`, `target.manage` (Admin-only), `realization.review.sekretaris`, `realization.correct.sekretaris`, `realization.recommend.sekretaris` (approve non-final), `realization.return.sekretaris` (reject), `system.manage` (Super Admin-only), `user.manage` (Super Admin-only).
 
+**Permission tambahan (Phase 10, CR terhadap matrix di atas)**: `realization.view.own` — Operator dapat melihat realisasi **miliknya sendiri** (`input_by = user.id`) via `GET /realizations`/`GET /realizations/{id}`, di luar kewenangan `realization.manage` (create-only). Lihat `CLAUDE.md` §15 (2026-09-17) untuk alasan ini bukan preseden bagi Target (Operator bukan pemilik data Target).
+
+**Known Limitation (Phase 10)**: baris "Input Realisasi → Lihat" untuk Kepala Bidang/Kepala Sub Bidang di matrix di atas **belum dapat di-scope per-unit** — endpoint mengembalikan 403 eksplisit sampai TBD-4 CR-001 (mekanisme `unit_id`) diselesaikan. Lihat `CLAUDE.md` §16.
+
 ---
 
 ## 3. Folder Structure
