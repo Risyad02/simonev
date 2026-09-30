@@ -151,4 +151,12 @@ Route::prefix('realizations')->middleware('auth:sanctum')->group(function () {
         Route::post('/{realization}/attachments', [RealizationAttachmentController::class, 'store']);
         Route::post('/{realization}/submit', [RealizationWorkflowController::class, 'submit']);
     });
+
+    Route::middleware('permission:realization.validate.kasubbid|realization.validate.kabid|realization.recommend.sekretaris|realization.finalize.kadis')->group(function () {
+        Route::post('/{realization}/approve', [RealizationWorkflowController::class, 'approve']);
+    });
+
+    Route::middleware('permission:realization.validate.kasubbid|realization.validate.kabid|realization.return.sekretaris|realization.finalize.kadis')->group(function () {
+        Route::post('/{realization}/return', [RealizationWorkflowController::class, 'sendBack']);
+    });
 });

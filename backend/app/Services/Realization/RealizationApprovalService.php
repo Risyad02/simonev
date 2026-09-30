@@ -40,6 +40,26 @@ class RealizationApprovalService
     }
 
     /**
+     * @return array{0: bool, 1: Realization|string, 2: int|null}
+     */
+    public function approve(Realization $realization, User $actor, ?string $note = null): array
+    {
+        return $this->perform($realization, WorkflowAction::Approve, $actor, $note);
+    }
+
+    /**
+     * Mengembalikan realisasi ke pemilik data (status dikembalikan). Catatan
+     * wajib ditegakkan engine (422) berdasarkan registry, terlepas dari
+     * validasi request.
+     *
+     * @return array{0: bool, 1: Realization|string, 2: int|null}
+     */
+    public function sendBack(Realization $realization, User $actor, ?string $note): array
+    {
+        return $this->perform($realization, WorkflowAction::SendBack, $actor, $note);
+    }
+
+    /**
      * Entry point engine. Public agar dapat diuji langsung dan dibungkus
      * method bernama per aksi (approve/sendBack di CP-B2). Controller TIDAK
      * boleh meneruskan aksi yang berasal dari request ke sini.
