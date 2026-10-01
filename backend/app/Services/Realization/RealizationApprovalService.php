@@ -28,6 +28,7 @@ class RealizationApprovalService
     public function __construct(
         private readonly RealizationWorkflow $workflow,
         private readonly AuditService $auditService,
+        private readonly RealizationAccessService $access,
     ) {
     }
 
@@ -133,7 +134,7 @@ class RealizationApprovalService
             }
 
             $this->auditService->log(
-                action: ($this->isBackup($actor) ? 'backup_' : '').$transition->auditAction,
+                action: ($this->access->isBackup($actor) ? 'backup_' : '').$transition->auditAction,
                 entityType: 'Realization',
                 entityId: $locked->id,
                 oldValue: ['status' => $from->value],
@@ -146,20 +147,19 @@ class RealizationApprovalService
     }
 
     /**
-     * Satu-satunya tempat keputusan aktor (pemilik/backup/bukan-pemilik).
+     * Pintu masuk keputusan aktor untuk transisi. Aturan pemilik/backup
+     * didelegasikan ke RealizationAccessService (satu sumber kebenaran).
      *
-     * TBD-4: predikat unit-scope ditambahkan DI SINI (dan pada query antrean
-     * di CP-C) tanpa mengubah registry maupun state machine. Saat ini dimensi
-     * unit belum tersedia (Controlled Transitional Authorization).
+     * TBD-4: predikat unit-scope ditambahkan di RealizationAccessService
+     * (canActAsOwner, canView, approvalQueue) tanpa mengubah registry maupun
+     * state machine. Saat ini dimensi unit belum tersedia (Controlled
+     * Transitional Authorization).
      */
     private function authorizeActor(ActorRule $rule, Realization $realization, User $actor): bool
     {
-        $isOwner = $realization->input_by !== null
-            && (int) $realization->input_by === (int) $actor->id;
-
         return match ($rule) {
-            ActorRule::OwnerOrBackup => $isOwner || $this->isBackup($actor),
-            ActorRule::NotOwner      => ! $isOwner,
+            ActorRule::OwnerOrBackup => $this->access->canActAsOwner($realization, $actor),
+            ActorRule::NotOwner      => ! $this->access->isOwner($realization, $actor),
         };
     }
 
@@ -169,12 +169,6 @@ class RealizationApprovalService
             ActorRule::OwnerOrBackup => 'Anda hanya dapat memproses realisasi milik Anda sendiri.',
             ActorRule::NotOwner      => 'Anda tidak dapat memvalidasi atau mengembalikan realisasi yang Anda input sendiri.',
         };
-    }
-
-    /** Aktor backup-only (mis. Admin): punya manage.backup tanpa manage. */
-    private function isBackup(User $actor): bool
-    {
-        return ! $actor->can('realization.manage') && $actor->can('realization.manage.backup');
     }
 
     /**

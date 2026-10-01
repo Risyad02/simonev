@@ -97,9 +97,8 @@ class RealizationAccessService
      * Pemilik data atau aktor backup-only. Dipakai aksi pemilik di luar
      * transisi status (koreksi nilai, unggah lampiran).
      *
-     * TBD-4: predikat unit-scope untuk aksi pemilik ditambahkan di sini
-     * (dan di RealizationApprovalService::authorizeActor sampai keduanya
-     * dikonsolidasikan).
+     * TBD-4: predikat unit-scope untuk aksi pemilik ditambahkan di sini;
+     * RealizationApprovalService::authorizeActor mendelegasikan ke method ini.
      */
     public function canActAsOwner(Realization $realization, User $actor): bool
     {
