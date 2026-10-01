@@ -140,10 +140,15 @@ Route::prefix('targets')->middleware('auth:sanctum')->group(function () {
 // Phase 10 — Realization Management (Core)
 // ==========================================================================
 Route::prefix('realizations')->middleware('auth:sanctum')->group(function () {
+    Route::middleware('permission:realization.validate.kasubbid|realization.validate.kabid|realization.review.sekretaris|realization.finalize.kadis')->group(function () {
+        Route::get('/approval-queue', [RealizationWorkflowController::class, 'queue']);
+    });
+
     Route::middleware('permission:realization.view|realization.view.own|realization.view.cross-unit|realization.recap.view')->group(function () {
         Route::get('/', [RealizationController::class, 'index']);
         Route::get('/{realization}', [RealizationController::class, 'show']);
         Route::get('/{realization}/attachments/{attachment}/download', [RealizationAttachmentController::class, 'download']);
+        Route::get('/{realization}/history', [RealizationWorkflowController::class, 'history']);
     });
 
     Route::middleware('permission:realization.manage|realization.manage.backup')->group(function () {
