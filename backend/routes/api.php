@@ -155,6 +155,7 @@ Route::prefix('realizations')->middleware('auth:sanctum')->group(function () {
         Route::post('/', [RealizationController::class, 'store']);
         Route::post('/{realization}/attachments', [RealizationAttachmentController::class, 'store']);
         Route::post('/{realization}/submit', [RealizationWorkflowController::class, 'submit']);
+        Route::patch('/{realization}/value', [RealizationController::class, 'correctValue']);
     });
 
     Route::middleware('permission:realization.validate.kasubbid|realization.validate.kabid|realization.recommend.sekretaris|realization.finalize.kadis')->group(function () {

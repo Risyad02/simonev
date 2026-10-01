@@ -81,6 +81,31 @@ class RealizationAccessService
             ->exists();
     }
 
+    /** Aktor backup-only (mis. Admin): punya manage.backup tanpa manage. */
+    public function isBackup(User $actor): bool
+    {
+        return ! $actor->can('realization.manage') && $actor->can('realization.manage.backup');
+    }
+
+    public function isOwner(Realization $realization, User $actor): bool
+    {
+        return $realization->input_by !== null
+            && (int) $realization->input_by === (int) $actor->id;
+    }
+
+    /**
+     * Pemilik data atau aktor backup-only. Dipakai aksi pemilik di luar
+     * transisi status (koreksi nilai, unggah lampiran).
+     *
+     * TBD-4: predikat unit-scope untuk aksi pemilik ditambahkan di sini
+     * (dan di RealizationApprovalService::authorizeActor sampai keduanya
+     * dikonsolidasikan).
+     */
+    public function canActAsOwner(Realization $realization, User $actor): bool
+    {
+        return $this->isOwner($realization, $actor) || $this->isBackup($actor);
+    }
+
     /**
      * Antrean: realisasi yang statusnya berada di tahap aktor. Tanpa filter
      * unit (temporary limitation). Tidak memuat relasi inputBy karena kunci

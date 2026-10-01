@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Realization;
 
 use App\Http\Controllers\Api\V1\BaseController;
+use App\Http\Requests\Realization\CorrectRealizationValueRequest;
 use App\Http\Requests\Realization\StoreRealizationRequest;
 use App\Models\Realization;
 use App\Services\Realization\RealizationAccessService;
@@ -53,5 +54,20 @@ class RealizationController extends BaseController
         }
 
         return $this->success($result, 'Realisasi berhasil dicatat', 201);
+    }
+
+    public function correctValue(CorrectRealizationValueRequest $request, Realization $realization)
+    {
+        [$ok, $result, $statusCode] = $this->service->correctValue(
+            $realization,
+            $request->validated(),
+            $request->user()
+        );
+
+        if (! $ok) {
+            return $this->error($result, null, $statusCode);
+        }
+
+        return $this->success($result, 'Nilai realisasi berhasil dikoreksi');
     }
 }
