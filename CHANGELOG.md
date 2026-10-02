@@ -2,6 +2,42 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-10-02] — Phase 11 Selesai: Validation & Approval Workflow
+
+### Ditambahkan
+- **Registry workflow** (`App\Services\Realization\Workflow\*`): `RealizationWorkflow` berisi 10 transisi (T1–T6 maju, R1–R4 return), `RealizationTransition`, `WorkflowAction`, `ActorRule`; enum `RealizationStatus` (7 status) dan `ApprovalHistoryAction`.
+- **Engine transisi** `RealizationApprovalService` (submit/approve/sendBack): aturan aktor, `lockForUpdate` dengan pembacaan ulang status, update status, `approval_history`, audit dengan snapshot nilai — satu transaction.
+- **Akses & antrean** `RealizationAccessService`: `canView`, `stagesFor`, `approvalQueue`, `canActAsOwner`; `ApiResponseTrait::paginated()` (endpoint berpaginasi pertama).
+- **Endpoint**: `POST /realizations/{id}/submit`, `/approve`, `/return`; `PATCH /realizations/{id}/value`; `GET /realizations/approval-queue`; `GET /realizations/{id}/history`.
+- **Model** `ApprovalHistory` (append-only); guard append-only pada `AuditLog`; `RealizationFactory`; accessor `is_final` dan `status_label` pada `Realization` (field tambahan, field lama tidak berubah).
+- 165 test baru (Unit dan Feature), termasuk uji service untuk seluruh 10 transisi, rollback atomik, dan jaring regresi Phase 10.
+
+### Diubah (kompatibel mundur terhadap Phase 10)
+- `RealizationController::show()` dan `RealizationAttachmentController::download()` memakai `canView` terpusat; perilaku role yang sudah ada tidak berubah, Kasubbid/Kabid kini dapat membuka realisasi pada tahap/riwayat mereka.
+- `RealizationAttachmentService::store()`: unggah hanya saat `draft`/`dikembalikan` (409 untuk status lain); pemeriksaan sebelum file ditulis dan diulang di bawah lock; file dihapus bila transaction mengembalikan kegagalan (sebelumnya hanya saat exception).
+- `RealizationService`: `create()` memakai helper evaluasi formula bersama (perilaku identik) dan ditambah `correctValue()`.
+
+### Diputuskan
+- **Controlled Transitional Authorization (Option A)**: otorisasi workflow wajib; unit-scope belum tersedia (TBD-4) dan dicatat sebagai temporary limitation, bukan desain final. Tidak ada `unit_id` buatan.
+- **D-A** semua return ke pemilik data. **D-B** submit/koreksi oleh pemilik atau aktor backup dengan jejak `backup_*` + `owner_id`. **D-C** `correct.sekretaris` reserved; Sekretaris tidak pernah mengubah nilai. **D-D** `finalize.kadis` untuk approve final dan return. **D-E** koreksi nilai in-place terbatas pada `dikembalikan`; amandemen setelah `disahkan` di luar Phase 11. **D-F** akses baca berbasis tahap. **D-G** lampiran dikunci sejak `diajukan`. Detail: `CLAUDE.md` §15.
+- Koreksi `CLAUDE.md` §9: return berujung ke pemilik data, bukan "tahap sebelumnya" (selaras CR-001/AD-3).
+
+### Diverifikasi
+- Regresi penuh: **357 test / 1295 assertions lulus**, 0 gagal.
+- `migrate:fresh --seed` dari kondisi kosong pada database terpisah: 6 Formula bawaan `type=system`, 9 role, 39 permission, tabel `realizations`/`approval_history`/`audit_logs` berengine InnoDB.
+- Uji concurrency di MariaDB nyata: submit dan koreksi nilai menunggu lock baris (sekitar 3,85 detik) lalu ditolak 409 setelah membaca status terbaru; dua submit paralel menghasilkan tepat satu keberhasilan, satu baris history, satu baris audit.
+- Postman E2E terhadap MariaDB nyata: siklus penuh hingga `disahkan`, siklus koreksi Sekretaris (nilai terkoreksi terikat pada snapshot validasi berikutnya), submit backup (audit `owner_id`), manipulasi body tidak berpengaruh (aktor dan `acted_at` dari server), akses baca dan paginasi; guard append-only terbukti pada data nyata.
+
+### Tidak Berubah
+- Migration, seeder, dan permission (tetap 39); Formula Engine; Target; infrastruktur audit selain guard append-only pada model; urutan roadmap.
+
+### Known Open Items (dicatat eksplisit, bukan diselesaikan diam-diam)
+- Unit-scope (TBD-4 CR-001) — lihat `CLAUDE.md` §16.
+- Tidak ada status void; `input_by` NULL; multi-role approver; amandemen setelah `disahkan`; history tanpa paginasi.
+
+### Impacted Files
+`backend/app/Enums/{RealizationStatus,ApprovalHistoryAction}.php`; `backend/app/Services/Realization/Workflow/{WorkflowAction,ActorRule,RealizationTransition,RealizationWorkflow}.php`; `backend/app/Services/Realization/{RealizationApprovalService,RealizationAccessService}.php` (baru) dan `{RealizationService,RealizationAttachmentService}.php` (diubah); `backend/app/Models/ApprovalHistory.php` (baru), `{Realization,AuditLog}.php` (diubah); `backend/app/Http/Controllers/Api/V1/Realization/RealizationWorkflowController.php` (baru), `{RealizationController,RealizationAttachmentController}.php` (diubah); `backend/app/Http/Requests/Realization/{SubmitRealizationRequest,ApproveRealizationRequest,ReturnRealizationRequest,ApprovalQueueRequest,CorrectRealizationValueRequest}.php`; `backend/app/Http/Traits/ApiResponseTrait.php`; `backend/database/factories/RealizationFactory.php`; `backend/routes/api.php`; `backend/tests/Concerns/CreatesRealizationFixtures.php`; `backend/tests/Unit/Realization/*`; `backend/tests/Feature/{Models,Services/Realization,Api/V1/Realization}/*` (file baru); `CLAUDE.md`, `ROADMAP.md`, `CHANGELOG.md`, `docs/architecture/README.md` (diubah); branch `feature/phase11-validation-approval-workflow`.
+
 ## [2026-09-25] — Phase 10 Completed: Realization Management
 
 ### Added

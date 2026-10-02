@@ -109,11 +109,20 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
   - **Known Limitation resmi** (lihat CLAUDE.md §16): unit-scope filtering untuk `realization.view` (Kepala Bidang/Kepala Sub Bidang, non-cross-unit) tidak dapat diimplementasikan — rantai `PerformanceStructure → Unit` tidak ada sama sekali di schema (tidak ada `unit_id`), terkait TBD-4 CR-001 yang belum diselesaikan. Endpoint mengembalikan 403 eksplisit dengan pesan jelas untuk role ini, bukan data kosong/penuh.
   - 3 formula teruji end-to-end (`persentase_capaian`/`target_per_realisasi`/`nilai_langsung`), memenuhi AC "minimal 3 tipe formula". Verifikasi manual Postman terhadap MariaDB nyata dilakukan (pola sama Phase 9), seluruh skenario sesuai ekspektasi. Total regresi final: **192 test/326 assertions lulus**, 0 gagal. Selesai pada 2026-09-25.
 
-## Phase 11 — Validation & Approval Workflow — ⚪
+## Phase 11 — Validation & Approval Workflow — 🟢 COMPLETED
 - **Tujuan**: Alur status Draft → Kasubbid → Kabid → **Sekretaris (Review/Koreksi/Approve/Reject, non-final)** → Kadis (final), dengan audit trail (CR-001, AD-3).
 - **Prerequisite**: Phase 10 selesai.
 - **Pekerjaan tambahan (CR-001)**: implementasi mekanisme Koreksi Sekretaris (kembalikan → perbaikan oleh pihak berwenang sesuai pemilik data/workflow masing-masing → ajukan ulang → review kembali) — Sekretaris tidak pernah mengubah nilai realisasi secara langsung; Approve Sekretaris menghasilkan status "direkomendasikan ke Kadis" (bukan status final); UI wajib membedakan status ini dari "Disahkan".
 - **Acceptance Criteria**: Setiap transisi status tercatat lengkap (aktor, waktu, catatan); reject/koreksi mengembalikan ke pihak berwenang yang benar (bukan selalu Operator/Kasubbid/Kabid — mengikuti pemilik data); status setelah Approve Sekretaris secara jelas bukan status final; hanya Kadis yang dapat menghasilkan status "Disahkan".
+- **Status**: 🟢 **Completed** (2026-10-02) — Dibangun bertahap lewat 5 checkpoint dan 1 refactor (7 commit kode, `0144f09`..`fdbfe4d`, di `feature/phase11-validation-approval-workflow`):
+1. **CP-A Fondasi domain** — enum `RealizationStatus`/`ApprovalHistoryAction`, registry `RealizationWorkflow` (10 transisi: T1–T6 maju, R1–R4 return), `ApprovalHistory` dan `AuditLog` append-only di level model, `RealizationFactory`, accessor `is_final`/`status_label`.
+2. **CP-B1 Engine & submit** — `RealizationApprovalService`: satu engine untuk semua transisi (cek aktor → `DB::transaction` + `lockForUpdate` + baca ulang status → update status → `approval_history` → audit), `POST /realizations/{id}/submit`.
+3. **CP-B2 Approve & return** — `POST /realizations/{id}/approve` dan `/return` sebagai wrapper tipis di atas engine yang sama; return wajib catatan.
+4. **CP-C Akses baca & antrean** — `RealizationAccessService`, `GET /realizations/approval-queue` (berpaginasi, tanpa filter unit — Known Limitation), akses `show`/`download`/`history` berbasis tahap, `ApiResponseTrait::paginated()`.
+5. **CP-D Koreksi & lampiran** — `PATCH /realizations/{id}/value` (in-place, hanya `dikembalikan`, formula dihitung ulang terhadap target asli, audit sebelum/sesudah), guard lampiran sejak `diajukan`, helper evaluasi formula bersama.
+6. **Refactor F-1** — aturan pemilik/backup dipusatkan di `RealizationAccessService` (satu titik sambung TBD-4).
+- **Controlled Transitional Authorization** (keputusan Owner): otorisasi workflow aktif; unit-scope menunggu TBD-4 — lihat `CLAUDE.md` §16. Tanpa migration, seeder, maupun permission baru; `realization.correct.sekretaris` reserved.
+- **Verifikasi**: regresi **357 test / 1295 assertions** lulus (192 Phase 10 + 165 baru), 0 gagal; `migrate:fresh --seed` pada database terpisah (6 Formula `type=system`, 9 role, 39 permission, InnoDB); uji lock concurrency di MariaDB nyata (submit dan koreksi nilai menunggu lock sekitar 3,85 detik lalu ditolak 409 setelah membaca ulang status; submit paralel menghasilkan tepat satu keberhasilan); Postman E2E seluruh alur (siklus penuh, koreksi Sekretaris, backup, manipulasi body, akses baca, paginasi) dengan bukti jejak di `approval_history` dan `audit_logs`.
 
 ## Phase 12 — Dashboard & Analytics — ⚪
 - **Tujuan**: Dashboard internal per role + grafik (ApexCharts) + filter multi-dimensi.
