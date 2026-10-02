@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Indicator\IndicatorVersionController;
 use App\Http\Controllers\Api\V1\Target\TargetController;
 use App\Http\Controllers\Api\V1\Realization\RealizationController;
 use App\Http\Controllers\Api\V1\Realization\RealizationAttachmentController;
+use App\Http\Controllers\Api\V1\Realization\RealizationWorkflowController;
 // Route API akan didaftarkan di sini bertahap sesuai fase roadmap.
 // Prefix /api/v1 diterapkan di bootstrap/app.php, bukan di sini.
 
@@ -139,14 +140,29 @@ Route::prefix('targets')->middleware('auth:sanctum')->group(function () {
 // Phase 10 — Realization Management (Core)
 // ==========================================================================
 Route::prefix('realizations')->middleware('auth:sanctum')->group(function () {
+    Route::middleware('permission:realization.validate.kasubbid|realization.validate.kabid|realization.review.sekretaris|realization.finalize.kadis')->group(function () {
+        Route::get('/approval-queue', [RealizationWorkflowController::class, 'queue']);
+    });
+
     Route::middleware('permission:realization.view|realization.view.own|realization.view.cross-unit|realization.recap.view')->group(function () {
         Route::get('/', [RealizationController::class, 'index']);
         Route::get('/{realization}', [RealizationController::class, 'show']);
         Route::get('/{realization}/attachments/{attachment}/download', [RealizationAttachmentController::class, 'download']);
+        Route::get('/{realization}/history', [RealizationWorkflowController::class, 'history']);
     });
 
     Route::middleware('permission:realization.manage|realization.manage.backup')->group(function () {
         Route::post('/', [RealizationController::class, 'store']);
         Route::post('/{realization}/attachments', [RealizationAttachmentController::class, 'store']);
+        Route::post('/{realization}/submit', [RealizationWorkflowController::class, 'submit']);
+        Route::patch('/{realization}/value', [RealizationController::class, 'correctValue']);
+    });
+
+    Route::middleware('permission:realization.validate.kasubbid|realization.validate.kabid|realization.recommend.sekretaris|realization.finalize.kadis')->group(function () {
+        Route::post('/{realization}/approve', [RealizationWorkflowController::class, 'approve']);
+    });
+
+    Route::middleware('permission:realization.validate.kasubbid|realization.validate.kabid|realization.return.sekretaris|realization.finalize.kadis')->group(function () {
+        Route::post('/{realization}/return', [RealizationWorkflowController::class, 'sendBack']);
     });
 });

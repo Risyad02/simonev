@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Api\V1\Realization;
 
 use App\Http\Controllers\Api\V1\BaseController;
+use App\Http\Requests\Realization\CorrectRealizationValueRequest;
 use App\Http\Requests\Realization\StoreRealizationRequest;
 use App\Models\Realization;
+use App\Services\Realization\RealizationAccessService;
 use App\Services\Realization\RealizationService;
 use Illuminate\Http\Request;
 
 class RealizationController extends BaseController
 {
-    public function __construct(protected RealizationService $service)
-    {
+    public function __construct(
+        protected RealizationService $service,
+        protected RealizationAccessService $access,
+    ) {
     }
 
     public function index(Request $request)
@@ -31,11 +35,7 @@ class RealizationController extends BaseController
 
     public function show(Request $request, Realization $realization)
     {
-        $actor = $request->user();
-        $canViewAll = $actor->can('realization.view.cross-unit') || $actor->can('realization.recap.view');
-        $isOwner = $realization->input_by === $actor->id;
-
-        if (! $canViewAll && ! $isOwner) {
+        if (! $this->access->canView($realization, $request->user())) {
             return $this->error('Anda tidak memiliki akses ke realisasi ini.', null, 403);
         }
 
@@ -54,5 +54,20 @@ class RealizationController extends BaseController
         }
 
         return $this->success($result, 'Realisasi berhasil dicatat', 201);
+    }
+
+    public function correctValue(CorrectRealizationValueRequest $request, Realization $realization)
+    {
+        [$ok, $result, $statusCode] = $this->service->correctValue(
+            $realization,
+            $request->validated(),
+            $request->user()
+        );
+
+        if (! $ok) {
+            return $this->error($result, null, $statusCode);
+        }
+
+        return $this->success($result, 'Nilai realisasi berhasil dikoreksi');
     }
 }

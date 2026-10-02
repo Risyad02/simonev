@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use LogicException;
 
 class AuditLog extends Model
 {
@@ -25,4 +26,21 @@ class AuditLog extends Model
         'old_value' => 'array',
         'new_value' => 'array',
     ];
+
+    /**
+     * Append-only ditegakkan juga di level model (Phase 11): nilai lama hasil
+     * koreksi realisasi hanya tersimpan di sini, sehingga baris audit tidak
+     * boleh diubah atau dihapus lewat Eloquent. Catatan: operasi massal via
+     * Query Builder tidak melewati event model dan tidak tercegah di level ini.
+     */
+    protected static function booted(): void
+    {
+        static::updating(function (): never {
+            throw new LogicException('AuditLog bersifat append-only dan tidak dapat diubah.');
+        });
+
+        static::deleting(function (): never {
+            throw new LogicException('AuditLog bersifat append-only dan tidak dapat dihapus.');
+        });
+    }
 }
