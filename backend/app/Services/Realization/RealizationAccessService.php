@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Services\Realization\Workflow\RealizationWorkflow;
 use App\Services\Realization\Workflow\WorkflowAction;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
 /**
  * Keputusan akses BACA Realization (Phase 11) dan antrean persetujuan.
@@ -79,6 +81,42 @@ class RealizationAccessService
             ->where('realization_id', $realization->id)
             ->where('actor_id', $actor->id)
             ->exists();
+    }
+
+    /**
+     * Bentuk QUERY dari keputusan canView() — wajib tetap setara dengannya
+     * (dijaga RealizationReadScopeParityTest). TBD-4: predikat unit-scope
+     * ditambahkan di sini DAN di canView().
+     *
+     * Nama kolom dapat diganti agar method ini bisa dipasang pada query
+     * turunan (mis. alias tabel dashboard).
+     */
+    public function applyReadScope(
+        EloquentBuilder|QueryBuilder $query,
+        User $actor,
+        string $idColumn = 'realizations.id',
+        string $statusColumn = 'realizations.status',
+        string $inputByColumn = 'realizations.input_by',
+    ): EloquentBuilder|QueryBuilder {
+        if ($actor->can('realization.view.cross-unit') || $actor->can('realization.recap.view')) {
+            return $query;
+        }
+
+        $stages = array_map(
+            fn (RealizationStatus $status): string => $status->value,
+            $this->stagesFor($actor)
+        );
+
+        return $query->where(function ($scope) use ($actor, $idColumn, $statusColumn, $inputByColumn, $stages) {
+            $scope->where($inputByColumn, $actor->id)
+                ->orWhereIn($statusColumn, $stages)
+                ->orWhereExists(function ($sub) use ($actor, $idColumn) {
+                    $sub->selectRaw('1')
+                        ->from('approval_history')
+                        ->whereColumn('approval_history.realization_id', $idColumn)
+                        ->where('approval_history.actor_id', $actor->id);
+                });
+        });
     }
 
     /** Aktor backup-only (mis. Admin): punya manage.backup tanpa manage. */
