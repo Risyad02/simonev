@@ -106,7 +106,13 @@ class OfficialRealizationQuery
             ->fromSub($this->anchor(), 'a')
             ->join('indicator_versions as iv', 'iv.id', '=', 'a.indicator_version_id')
             ->where('a.anchor_is_active', 1)
-            ->select(['a.indicator_version_id', 'a.period_label']);
+            ->select([
+                'a.indicator_version_id',
+                'a.period_label',
+                'iv.indicator_id',
+                'iv.is_active AS indicator_version_is_active',
+                'iv.direction_id',
+            ]);
 
         $this->applyFilters($query, $filters, 'a.period_label');
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Dashboard;
 
 use App\Http\Controllers\Api\V1\BaseController;
 use App\Http\Requests\Dashboard\DashboardFilterRequest;
+use App\Services\Dashboard\DashboardDataQualityService;
 use App\Services\Dashboard\DashboardPipelineService;
 use App\Services\Dashboard\DashboardScope;
 use App\Services\Dashboard\DashboardScopeService;
@@ -18,6 +19,7 @@ class DashboardController extends BaseController
         private readonly DashboardScopeService $scopes,
         private readonly DashboardSummaryService $summaryService,
         private readonly DashboardPipelineService $pipelineService,
+        private readonly DashboardDataQualityService $dataQualityService,
     ) {
     }
 
@@ -50,6 +52,20 @@ class DashboardController extends BaseController
         return $this->successWithMeta(
             $this->pipelineService->pipeline($user, $scope),
             ['basis' => $this->basis($scope, [], false)],
+        );
+    }
+
+    public function dataQuality(Request $request): JsonResponse
+    {
+        $scope = $this->scopes->resolve($request->user());
+
+        if ($scope === null || ! $scope->includeDataQuality) {
+            return $this->error('Anda tidak memiliki akses ke laporan kualitas data.', null, 403);
+        }
+
+        return $this->successWithMeta(
+            $this->dataQualityService->report(),
+            ['basis' => $this->basis($scope, [], true)],
         );
     }
 

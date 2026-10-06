@@ -176,4 +176,5 @@ Route::prefix('dashboard')
     ->group(function () {
         Route::get('/summary', [DashboardController::class, 'summary']);
         Route::get('/pipeline', [DashboardController::class, 'pipeline']);
+        Route::get('/data-quality', [DashboardController::class, 'dataQuality']);
 });

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\DB;
 class DashboardSummaryService
 {
     /** Nama arah (MeasurementDirectionSeeder) yang membuat capaian layak dirata-rata. */
-    private const ASSESSED_DIRECTIONS = ['Naik Lebih Baik', 'Turun Lebih Baik'];
+    private const ASSESSED_DIRECTIONS = [DirectionNames::UP, DirectionNames::DOWN];
 
     public function __construct(
         private readonly OfficialRealizationQuery $official,
