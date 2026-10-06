@@ -45,13 +45,7 @@ class OfficialRealizationQuery
      */
     public function builder(array $filters = []): Builder
     {
-        $unknown = array_diff(array_keys($filters), array_keys(self::FILTER_COLUMNS));
-
-        if ($unknown !== []) {
-            throw new InvalidArgumentException(
-                'Filter dashboard tidak dikenal: '.implode(', ', $unknown).'.'
-            );
-        }
+        $this->assertKnownFilters($filters);
 
         $finalized = DB::table('approval_history')
             ->selectRaw('realization_id, MAX(COALESCE(acted_at, created_at)) AS finalized_at')
@@ -71,31 +65,9 @@ class OfficialRealizationQuery
                 .'ORDER BY COALESCE(h.finalized_at, r.updated_at) DESC, r.id DESC) AS rn'
             );
 
-        $anchorRanked = DB::table('targets as tg')
-            ->selectRaw(
-                'tg.id AS anchor_target_id, tg.indicator_version_id, tg.period_label, '
-                .'tg.revision_no AS anchor_revision_no, '
-                .'tg.planning_document_id AS anchor_planning_document_id, '
-                .'tg.is_active AS anchor_is_active, '
-                .'ROW_NUMBER() OVER (PARTITION BY tg.indicator_version_id, tg.period_label '
-                .'ORDER BY tg.is_active DESC, tg.revision_no DESC, tg.id DESC) AS arn'
-            );
-
-        $anchor = DB::query()
-            ->fromSub($anchorRanked, 'ax')
-            ->where('ax.arn', 1)
-            ->select([
-                'ax.anchor_target_id',
-                'ax.indicator_version_id',
-                'ax.period_label',
-                'ax.anchor_revision_no',
-                'ax.anchor_planning_document_id',
-                'ax.anchor_is_active',
-            ]);
-
         $query = DB::query()
             ->fromSub($ranked, 'w')
-            ->joinSub($anchor, 'a', function (JoinClause $join) {
+            ->joinSub($this->anchor(), 'a', function (JoinClause $join) {
                 $join->on('a.indicator_version_id', '=', 'w.indicator_version_id')
                     ->on('a.period_label', '=', 'w.period_label');
             })
@@ -115,12 +87,79 @@ class OfficialRealizationQuery
                 .'f.formula_type, f.type AS formula_kind'
             );
 
-        foreach ($filters as $name => $value) {
-            if ($value !== null) {
-                $query->where(self::FILTER_COLUMNS[$name], $value);
-            }
-        }
+        $this->applyFilters($query, $filters, 'w.period_label');
 
         return $query;
+    }
+
+    /**
+     * Semesta cakupan (Owner D8): satu baris per kunci yang target jangkarnya
+     * aktif, tanpa filter status versi indikator. Filter sama dengan builder().
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function universe(array $filters = []): Builder
+    {
+        $this->assertKnownFilters($filters);
+
+        $query = DB::query()
+            ->fromSub($this->anchor(), 'a')
+            ->join('indicator_versions as iv', 'iv.id', '=', 'a.indicator_version_id')
+            ->where('a.anchor_is_active', 1)
+            ->select(['a.indicator_version_id', 'a.period_label']);
+
+        $this->applyFilters($query, $filters, 'a.period_label');
+
+        return $query;
+    }
+
+    /** Satu target jangkar per kunci: aktif lebih dulu, lalu revisi tertinggi, lalu id. */
+    private function anchor(): Builder
+    {
+        $ranked = DB::table('targets as tg')
+            ->selectRaw(
+                'tg.id AS anchor_target_id, tg.indicator_version_id, tg.period_label, '
+                .'tg.revision_no AS anchor_revision_no, '
+                .'tg.planning_document_id AS anchor_planning_document_id, '
+                .'tg.is_active AS anchor_is_active, '
+                .'ROW_NUMBER() OVER (PARTITION BY tg.indicator_version_id, tg.period_label '
+                .'ORDER BY tg.is_active DESC, tg.revision_no DESC, tg.id DESC) AS arn'
+            );
+
+        return DB::query()
+            ->fromSub($ranked, 'ax')
+            ->where('ax.arn', 1)
+            ->select([
+                'ax.anchor_target_id',
+                'ax.indicator_version_id',
+                'ax.period_label',
+                'ax.anchor_revision_no',
+                'ax.anchor_planning_document_id',
+                'ax.anchor_is_active',
+            ]);
+    }
+
+    /** @param  array<string, mixed>  $filters */
+    private function assertKnownFilters(array $filters): void
+    {
+        $unknown = array_diff(array_keys($filters), array_keys(self::FILTER_COLUMNS));
+
+        if ($unknown !== []) {
+            throw new InvalidArgumentException(
+                'Filter dashboard tidak dikenal: '.implode(', ', $unknown).'.'
+            );
+        }
+    }
+
+    /** @param  array<string, mixed>  $filters */
+    private function applyFilters(Builder $query, array $filters, string $periodColumn): void
+    {
+        $columns = ['period_label' => $periodColumn] + self::FILTER_COLUMNS;
+
+        foreach ($filters as $name => $value) {
+            if ($value !== null) {
+                $query->where($columns[$name], $value);
+            }
+        }
     }
 }

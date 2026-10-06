@@ -164,4 +164,14 @@ trait CreatesDashboardFixtures
             'acted_at'       => $actedAt,
         ]);
     }
+
+    protected function makeDashDirection(string $name): int
+    {
+        return DB::table('measurement_directions')->insertGetId([
+            'name'        => $name,
+            'description' => null,
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+    }
 }

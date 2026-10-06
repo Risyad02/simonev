@@ -1,0 +1,88 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Dashboard;
+
+use App\Http\Controllers\Api\V1\BaseController;
+use App\Http\Requests\Dashboard\DashboardFilterRequest;
+use App\Services\Dashboard\DashboardPipelineService;
+use App\Services\Dashboard\DashboardScope;
+use App\Services\Dashboard\DashboardScopeService;
+use App\Services\Dashboard\DashboardSummaryService;
+use App\Services\Dashboard\OfficialRealizationQuery;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class DashboardController extends BaseController
+{
+    public function __construct(
+        private readonly DashboardScopeService $scopes,
+        private readonly DashboardSummaryService $summaryService,
+        private readonly DashboardPipelineService $pipelineService,
+    ) {
+    }
+
+    public function summary(DashboardFilterRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $scope = $this->scopes->resolve($user);
+
+        if ($scope === null) {
+            return $this->error('Anda tidak memiliki akses dashboard.', null, 403);
+        }
+
+        $filters = $request->filters();
+
+        return $this->successWithMeta(
+            $this->summaryService->summarize($user, $scope, $filters),
+            ['basis' => $this->basis($scope, $filters, true)],
+        );
+    }
+
+    public function pipeline(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $scope = $this->scopes->resolve($user);
+
+        if ($scope === null) {
+            return $this->error('Anda tidak memiliki akses dashboard.', null, 403);
+        }
+
+        return $this->successWithMeta(
+            $this->pipelineService->pipeline($user, $scope),
+            ['basis' => $this->basis($scope, [], false)],
+        );
+    }
+
+    /**
+     * Dasar perhitungan yang menyertai setiap respons agar konsumen tidak
+     * menganggap aturan sementara sebagai definisi permanen.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    private function basis(DashboardScope $scope, array $filters, bool $official): array
+    {
+        $basis = [
+            'scope' => [
+                'mode'         => $scope->mode,
+                'transitional' => $scope->transitional,
+                'description'  => $scope->transitional
+                    ? 'Unit-scope belum tersedia (TBD-4): data dibatasi menurut kepemilikan, tahap workflow, dan riwayat tindakan Anda.'
+                    : 'Seluruh data; unit-scope belum tersedia (TBD-4).',
+            ],
+            'filters'      => $filters,
+            'generated_at' => now()->toIso8601String(),
+        ];
+
+        if ($official) {
+            return [
+                'official_rule' => OfficialRealizationQuery::RULE,
+                'key'           => OfficialRealizationQuery::KEY,
+            ] + $basis;
+        }
+
+        return $basis + [
+            'note' => 'Pipeline bukan angka resmi: direkap_sekretaris bukan status final; hanya disahkan yang dihitung resmi.',
+        ];
+    }
+}
