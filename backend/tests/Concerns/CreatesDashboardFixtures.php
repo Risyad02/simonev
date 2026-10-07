@@ -39,6 +39,7 @@ trait CreatesDashboardFixtures
     protected function makeDashIndicatorVersion(
         string $formulaType = 'persentase_capaian',
         ?int $directionId = null,
+        ?int $structureId = null,
     ): IndicatorVersion {
         $satuan = UnitOfMeasure::create(['name' => 'Satuan Dash '.uniqid()]);
         $formula = Formula::create([
@@ -51,7 +52,7 @@ trait CreatesDashboardFixtures
             'periods_per_year' => 4,
         ]);
 
-        $structureId = DB::table('performance_structure')->insertGetId([
+            $structureId ??= DB::table('performance_structure')->insertGetId([
             'level_type' => 'Tujuan',
             'name'       => 'Struktur Dash '.uniqid(),
             'is_active'  => true,
@@ -172,6 +173,18 @@ trait CreatesDashboardFixtures
             'description' => null,
             'created_at'  => now(),
             'updated_at'  => now(),
+        ]);
+    }
+
+    protected function makeDashStructureNode(string $levelType, string $name, ?int $parentId = null): int
+    {
+        return DB::table('performance_structure')->insertGetId([
+            'parent_id'  => $parentId,
+            'level_type' => $levelType,
+            'name'       => $name,
+            'is_active'  => true,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 }

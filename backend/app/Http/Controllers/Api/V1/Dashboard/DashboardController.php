@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api\V1\Dashboard;
 
 use App\Http\Controllers\Api\V1\BaseController;
+use App\Http\Requests\Dashboard\AchievementByStructureRequest;
+use App\Http\Requests\Dashboard\AchievementIndicatorsRequest;
 use App\Http\Requests\Dashboard\DashboardFilterRequest;
 use App\Services\Dashboard\DashboardDataQualityService;
+use App\Services\Dashboard\DashboardFilterOptionsService;
+use App\Services\Dashboard\DashboardIndicatorListService;
 use App\Services\Dashboard\DashboardPipelineService;
 use App\Services\Dashboard\DashboardScope;
 use App\Services\Dashboard\DashboardScopeService;
+use App\Services\Dashboard\DashboardStructureService;
 use App\Services\Dashboard\DashboardSummaryService;
 use App\Services\Dashboard\OfficialRealizationQuery;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +25,9 @@ class DashboardController extends BaseController
         private readonly DashboardSummaryService $summaryService,
         private readonly DashboardPipelineService $pipelineService,
         private readonly DashboardDataQualityService $dataQualityService,
+        private readonly DashboardIndicatorListService $indicatorListService,
+        private readonly DashboardStructureService $structureService,
+        private readonly DashboardFilterOptionsService $filterOptionsService,
     ) {
     }
 
@@ -65,6 +73,54 @@ class DashboardController extends BaseController
 
         return $this->successWithMeta(
             $this->dataQualityService->report(),
+            ['basis' => $this->basis($scope, [], true)],
+        );
+    }
+
+    public function achievementIndicators(AchievementIndicatorsRequest $request): JsonResponse
+    {
+        $user = $request->user();
+        $scope = $this->scopes->resolve($user);
+
+        if ($scope === null || ! $scope->rowLevel) {
+            return $this->error('Anda tidak memiliki akses ke daftar angka resmi per indikator.', null, 403);
+        }
+
+        $filters = $request->filters();
+
+        return $this->paginated(
+            $this->indicatorListService->paginate($user, $scope, $filters, $request->perPage()),
+            'Berhasil',
+            200,
+            ['basis' => $this->basis($scope, $filters, true)],
+        );
+    }
+
+    public function achievementByStructure(AchievementByStructureRequest $request): JsonResponse
+    {
+        $scope = $this->scopes->resolve($request->user());
+
+        if ($scope === null || ! $scope->coverageAvailable) {
+            return $this->error('Anda tidak memiliki akses ke agregasi per struktur.', null, 403);
+        }
+
+        return $this->successWithMeta(
+            $this->structureService->byLevel($request->validated('level')),
+            ['basis' => $this->basis($scope, [], true)],
+        );
+    }
+
+    public function filterOptions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $scope = $this->scopes->resolve($user);
+
+        if ($scope === null) {
+            return $this->error('Anda tidak memiliki akses dashboard.', null, 403);
+        }
+
+        return $this->successWithMeta(
+            $this->filterOptionsService->options($user, $scope),
             ['basis' => $this->basis($scope, [], true)],
         );
     }

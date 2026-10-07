@@ -177,4 +177,7 @@ Route::prefix('dashboard')
         Route::get('/summary', [DashboardController::class, 'summary']);
         Route::get('/pipeline', [DashboardController::class, 'pipeline']);
         Route::get('/data-quality', [DashboardController::class, 'dataQuality']);
+        Route::get('/achievement/indicators', [DashboardController::class, 'achievementIndicators']);
+        Route::get('/achievement/by-structure', [DashboardController::class, 'achievementByStructure']);
+        Route::get('/filter-options', [DashboardController::class, 'filterOptions']);
 });
