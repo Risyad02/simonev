@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\Target\TargetController;
 use App\Http\Controllers\Api\V1\Realization\RealizationController;
 use App\Http\Controllers\Api\V1\Realization\RealizationAttachmentController;
 use App\Http\Controllers\Api\V1\Realization\RealizationWorkflowController;
+use App\Http\Controllers\Api\V1\Dashboard\DashboardController;
 // Route API akan didaftarkan di sini bertahap sesuai fase roadmap.
 // Prefix /api/v1 diterapkan di bootstrap/app.php, bukan di sini.
 
@@ -165,4 +166,18 @@ Route::prefix('realizations')->middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:realization.validate.kasubbid|realization.validate.kabid|realization.return.sekretaris|realization.finalize.kadis')->group(function () {
         Route::post('/{realization}/return', [RealizationWorkflowController::class, 'sendBack']);
     });
+});
+
+// ==========================================================================
+// Phase 12A — Dashboard & Analytics (read-only)
+// ==========================================================================
+Route::prefix('dashboard')
+    ->middleware(['auth:sanctum', 'permission:dashboard.view.full|dashboard.view.operational|dashboard.view.own-scope|dashboard.view.cross-unit|dashboard.view.strategic-summary'])
+    ->group(function () {
+        Route::get('/summary', [DashboardController::class, 'summary']);
+        Route::get('/pipeline', [DashboardController::class, 'pipeline']);
+        Route::get('/data-quality', [DashboardController::class, 'dataQuality']);
+        Route::get('/achievement/indicators', [DashboardController::class, 'achievementIndicators']);
+        Route::get('/achievement/by-structure', [DashboardController::class, 'achievementByStructure']);
+        Route::get('/filter-options', [DashboardController::class, 'filterOptions']);
 });

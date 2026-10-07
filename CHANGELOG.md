@@ -2,6 +2,37 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-10-07] — Phase 12A Selesai: Dashboard & Analytics (API agregasi)
+
+### Ditambahkan
+- **Realisasi resmi dasbor** `OfficialRealizationQuery`: hanya status `disahkan`, satu realisasi terbaru per kunci (`indicator_version_id` + `period_label`), target jangkar aktif atau revisi tertinggi, `universe()` untuk semesta cakupan. Aturan sementara (lihat `CLAUDE.md` §15 dan §16).
+- **Scope baca terpusat**: `DashboardScopeService` dan `DashboardScope` (presedensi full, cross-unit, operational, own-scope, strategic-summary), `RealizationAccessService::applyReadScope` (setara `canView`, dijaga test paritas untuk 9 role).
+- **Endpoint** `/api/v1/dashboard`: `summary` (M1, rata-rata hanya dalam satu `formula_type`), `pipeline` (M2, bukan angka resmi), `data-quality` (M5, sepuluh hitungan integritas), `achievement/indicators` (M3, berpaginasi, hanya row-level), `achievement/by-structure` (M4, berbasis hitungan lewat recursive CTE, tanpa rata-rata capaian), `filter-options` (provisional, dibatasi read-scope).
+- `meta.basis` pada setiap respons dasbor; `ApiResponseTrait::successWithMeta()`; `DirectionNames` (satu sumber nama arah); 59 test baru.
+
+### Diubah (kompatibel mundur)
+- `ApiResponseTrait::paginated()` menerima parameter opsional `extraMeta`; kunci `meta` bawaan tidak berubah (test antrean Phase 11 tetap lulus).
+- `RealizationAccessService`: penambahan method `applyReadScope`; `canView`, `stagesFor`, `approvalQueue`, dan aturan pemilik tidak diubah.
+- `tests/Concerns/CreatesDashboardFixtures.php` dan `routes/api.php`: penambahan.
+
+### Diputuskan
+- **Cakupan**: 12A (API) dan 12B (Vue, ApexCharts) dipisah; 12B menunggu D6. **D1** aturan angka resmi sementara (terbaru menggantikan, bukan akumulasi). **D2** `meta.basis`. **D3** tanpa rata-rata campuran lintas `formula_type`, null bukan nol. **D5** presedensi permission dasbor dan satu titik sambung scope. **D8** semesta = target jangkar aktif tanpa filter status versi indikator. **D9** fondasi tanpa endpoint HTTP. Detail: `CLAUDE.md` §15.
+- Phase 12A diajukan sebagai PR tersendiri (`feature/phase12-dashboard-analytics` ke `develop`, merge commit).
+
+### Diverifikasi
+- Regresi penuh: **416 test / 1658 assertions** lulus, 0 gagal (357 sebelumnya tanpa diubah, 59 baru).
+- Setiap checkpoint dibuktikan merah sebelum implementasi, lalu dibandingkan dengan perhitungan independen di PHP pada MariaDB 10.4.32 (data sintetis sekitar 1.000 realisasi): realisasi resmi (209 kunci), `summary`, `pipeline`, `data-quality` (sepuluh hitungan, semuanya bukan nol), `achievement/indicators`, `achievement/by-structure` (lima level, pohon 93 node), `filter-options`; plus `EXPLAIN` tiap query utama. Index yang ada terpakai; tanpa migration dan tanpa index baru.
+
+### Tidak Berubah
+- Migration, seeder, dan permission (tetap 39); state machine dan registry Phase 11; Formula Engine; Target; Indikator; urutan roadmap.
+
+### Known Open Items (dicatat eksplisit, bukan diselesaikan diam-diam)
+- Aturan angka resmi sementara; periode string bebas (tren kinerja belum tersedia); unit-scope transisional (TBD-4); revisi indikator tidak menonaktifkan target lama; arah dicocokkan lewat nama; hierarki struktur tidak dipaksa; `filter-options` provisional; G18 (filter `indicator_id` pada `summary` untuk scope non-row-level) belum diputuskan; kinerja belum diukur pada data produksi — lihat `CLAUDE.md` §16.
+- Phase 12B menunggu D6 (daftar grafik dan filter UI/UX baseline Tahap 6).
+
+### Impacted Files
+`backend/app/Services/Dashboard/{OfficialRealizationQuery,DashboardScope,DashboardScopeService,DirectionNames,DashboardSummaryService,DashboardPipelineService,DashboardDataQualityService,DashboardIndicatorListService,DashboardStructureService,DashboardFilterOptionsService}.php` (baru); `backend/app/Http/Controllers/Api/V1/Dashboard/DashboardController.php` (baru); `backend/app/Http/Requests/Dashboard/{DashboardFilterRequest,AchievementIndicatorsRequest,AchievementByStructureRequest}.php` (baru); `backend/app/Services/Realization/RealizationAccessService.php` dan `backend/app/Http/Traits/ApiResponseTrait.php` (diubah, aditif); `backend/routes/api.php`; `backend/tests/Concerns/CreatesDashboardFixtures.php`; `backend/tests/Feature/Api/V1/Dashboard/*`, `backend/tests/Feature/Services/Dashboard/*`, `backend/tests/Feature/Services/Realization/RealizationReadScopeParityTest.php` (baru); `CLAUDE.md`, `ROADMAP.md`, `CHANGELOG.md` (diubah); branch `feature/phase12-dashboard-analytics`.
+
 ## [2026-10-02] — Phase 11 Selesai: Validation & Approval Workflow
 
 ### Ditambahkan

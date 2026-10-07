@@ -25,7 +25,17 @@ trait ApiResponseTrait
         ], $statusCode);
     }
 
-    protected function paginated(LengthAwarePaginator $paginator, string $message = 'Berhasil', int $statusCode = 200): JsonResponse
+    protected function successWithMeta($data, array $meta, string $message = 'Berhasil', int $statusCode = 200): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data'    => $data,
+            'message' => $message,
+            'meta'    => $meta,
+        ], $statusCode);
+    }
+
+    protected function paginated(LengthAwarePaginator $paginator, string $message = 'Berhasil', int $statusCode = 200, array $extraMeta = []): JsonResponse
     {
         return response()->json([
             'success' => true,
@@ -38,7 +48,7 @@ trait ApiResponseTrait
                 'last_page'    => $paginator->lastPage(),
                 'from'         => $paginator->firstItem(),
                 'to'           => $paginator->lastItem(),
-            ],
+            ] + $extraMeta,
             'links'   => [
                 'first' => $paginator->url(1),
                 'last'  => $paginator->url($paginator->lastPage()),

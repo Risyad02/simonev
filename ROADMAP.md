@@ -124,10 +124,14 @@ Status legend: ⚪ Belum mulai · 🟡 Berjalan · 🟢 Selesai/Completed
 - **Controlled Transitional Authorization** (keputusan Owner): otorisasi workflow aktif; unit-scope menunggu TBD-4 — lihat `CLAUDE.md` §16. Tanpa migration, seeder, maupun permission baru; `realization.correct.sekretaris` reserved.
 - **Verifikasi**: regresi **357 test / 1295 assertions** lulus (192 Phase 10 + 165 baru), 0 gagal; `migrate:fresh --seed` pada database terpisah (6 Formula `type=system`, 9 role, 39 permission, InnoDB); uji lock concurrency di MariaDB nyata (submit dan koreksi nilai menunggu lock sekitar 3,85 detik lalu ditolak 409 setelah membaca ulang status; submit paralel menghasilkan tepat satu keberhasilan); Postman E2E seluruh alur (siklus penuh, koreksi Sekretaris, backup, manipulasi body, akses baca, paginasi) dengan bukti jejak di `approval_history` dan `audit_logs`.
 
-## Phase 12 — Dashboard & Analytics — ⚪
+## Phase 12 — Dashboard & Analytics — 🟡 BERJALAN (12A selesai, 12B menunggu D6)
 - **Tujuan**: Dashboard internal per role + grafik (ApexCharts) + filter multi-dimensi.
 - **Prerequisite**: Phase 11 selesai.
 - **Acceptance Criteria**: Seluruh grafik pada spesifikasi UI/UX baseline tersedia & filter berfungsi.
+- **Status**: 🟡 **Berjalan** — Phase 12 dibagi menjadi dua sub-tahap (keputusan Owner), urutan roadmap tidak berubah:
+  - **12A — API agregasi dasbor (backend)**: 🟢 **Completed** (2026-10-07) — enam endpoint read-only `/api/v1/dashboard/*` (`summary`, `pipeline`, `data-quality`, `achievement/indicators`, `achievement/by-structure`, `filter-options`). Dibangun bertahap lewat empat checkpoint (CP1 `96daa1f`, CP2 `e4c7038`, CP3a `3c48f25`, CP3b `09944b1`) di `feature/phase12-dashboard-analytics`: realisasi resmi (hanya `disahkan`, aturan sementara), scope baca terpusat, ringkasan, pipeline, kualitas data, daftar per indikator, agregasi per struktur, opsi filter. Tanpa migration, seeder, permission baru, maupun perubahan workflow Phase 11. Verifikasi: 59 test baru, regresi **416 test / 1658 assertions** lulus; setiap checkpoint dibandingkan dengan perhitungan independen di MariaDB 10.4.32 (`EXPLAIN` dan probe).
+  - **12B — Dasbor Vue + ApexCharts**: ⚪ Belum dimulai. Dependency: daftar grafik dan filter UI/UX baseline Tahap 6 (D6); `apexcharts` belum ada di `frontend/package.json`. Acceptance Criteria Phase 12 (seluruh grafik baseline dan filter berfungsi) baru terpenuhi setelah 12B.
+- **Keterbatasan yang dibawa**: aturan angka resmi sementara, periode berupa string bebas (tren kinerja belum tersedia), unit-scope transisional (TBD-4), G18 belum diputuskan — lihat `CLAUDE.md` §16.
 
 ## Phase 13 — Supporting Data — ⚪
 - **Tujuan**: Modul data pendukung (DSSD, Kemiskinan, SPIP, SAKIP, IKU, IKD, Investasi) dengan skema fleksibel.
