@@ -2,6 +2,23 @@
 
 Format mengacu pada prinsip [Keep a Changelog](https://keepachangelog.com/) yang disederhanakan untuk kebutuhan internal proyek. Setiap keputusan arsitektur besar dicatat di sini **dan** di `CLAUDE.md` §15 (Important Decisions Log).
 
+## [2026-10-08] — Phase 12A: G18 Filter Indikator pada Summary
+
+### Diubah
+- `GET /api/v1/dashboard/summary`: filter `indicator_id` ditolak dengan 422 (`errors.indicator_id`) untuk scope tanpa akses row-level (Kasubbid, Kabid, Pimpinan). Scope row-level (Super Admin, Admin, Sekretaris, Kadis, Operator) dan filter lain tidak berubah. Perubahan hanya di `DashboardController::summary()`.
+
+### Diputuskan
+- G18 disetujui Owner (2026-10-08) sebagai PR kecil terpisah dari PR #11. Kombinasi filter lain masih dapat menyempitkan agregat ke sedikit indikator (bukan data per baris); dicatat di `CLAUDE.md` §16.
+
+### Diverifikasi
+- Test-first: 1 dari 3 test baru merah sebelum implementasi (200 alih-alih 422), dua lainnya penjaga regresi. Regresi penuh: **419 test / 1682 assertions** lulus.
+
+### Tidak Berubah
+- Migration, seeder, permission (tetap 39), workflow Phase 11, route, dan kontrak respons lain.
+
+### Impacted Files
+`backend/app/Http/Controllers/Api/V1/Dashboard/DashboardController.php`; `backend/tests/Feature/Api/V1/Dashboard/DashboardEndpointsTest.php`; `CLAUDE.md`, `ROADMAP.md`, `CHANGELOG.md`; branch `feature/phase12-g18-summary-indicator-filter`.
+
 ## [2026-10-07] — Phase 12A Selesai: Dashboard & Analytics (API agregasi)
 
 ### Ditambahkan
