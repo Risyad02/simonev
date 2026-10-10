@@ -42,6 +42,16 @@ class DashboardController extends BaseController
 
         $filters = $request->filters();
 
+        // G18: filter indikator menyempitkan agregat ke satu indikator, sehingga
+        // scope tanpa akses row-level tidak boleh memakainya.
+        if (! $scope->rowLevel && array_key_exists('indicator_id', $filters)) {
+            return $this->error(
+                'Filter indikator tidak tersedia untuk scope Anda.',
+                ['indicator_id' => ['Filter indikator tidak tersedia untuk scope Anda.']],
+                422,
+            );
+        }
+
         return $this->successWithMeta(
             $this->summaryService->summarize($user, $scope, $filters),
             ['basis' => $this->basis($scope, $filters, true)],

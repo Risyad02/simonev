@@ -306,4 +306,55 @@ class DashboardEndpointsTest extends TestCase
         $this->assertSame(1, $counts['diajukan'], 'Tahap Kasubbid adalah diajukan.');
         $this->assertSame(0, $counts['direkap_sekretaris']);
     }
+
+
+    // --- G18: filter indikator dan scope non-row-level -----------------------
+    public function test_non_row_level_scopes_cannot_filter_summary_by_indicator(): void
+    {
+        $iv = $this->makeDashIndicatorVersion();
+        $this->officialKey($iv, $this->makeDashPlanningDocument(), 'P1', 80);
+
+        foreach (['kepala_sub_bidang', 'kepala_bidang', 'pimpinan'] as $role) {
+            $this->actingAsRole($role);
+
+            $this->getJson(self::SUMMARY.'?indicator_id='.$iv->indicator_id)
+                ->assertStatus(422)
+                ->assertJsonPath('success', false)
+                ->assertJsonStructure(['errors' => ['indicator_id']]);
+        }
+    }
+
+    public function test_row_level_scopes_can_still_filter_summary_by_indicator(): void
+    {
+        $doc = $this->makeDashPlanningDocument();
+        $operator = $this->createUserWithRole('operator');
+        $ivA = $this->makeDashIndicatorVersion();
+        $ivB = $this->makeDashIndicatorVersion();
+        $this->officialKey($ivA, $doc, 'P1', 80, $operator);
+        $this->officialKey($ivB, $doc, 'P1', 90, $operator);
+
+        $url = self::SUMMARY.'?indicator_id='.$ivA->indicator_id;
+
+        foreach (['super_admin', 'admin', 'sekretaris', 'kepala_dinas'] as $role) {
+            $this->actingAsRole($role);
+            $this->getJson($url)->assertOk()->assertJsonPath('data.official.key_count', 1);
+        }
+
+        Sanctum::actingAs($operator);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.official.key_count', 1);
+    }
+
+    public function test_non_row_level_scopes_can_still_use_the_other_filters(): void
+    {
+        $iv = $this->makeDashIndicatorVersion();
+        $doc = $this->makeDashPlanningDocument();
+        $this->officialKey($iv, $doc, 'P1', 80);
+        $this->officialKey($iv, $doc, 'P2', 90);
+
+        $this->actingAsRole('pimpinan');
+
+        $this->getJson(self::SUMMARY.'?period_label=P2')
+            ->assertOk()
+            ->assertJsonPath('data.official.key_count', 1);
+    }
 }
